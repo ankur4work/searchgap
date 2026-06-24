@@ -12,6 +12,10 @@ case "${APP_MODE:-web}" in
     exec node_modules/.bin/tsx jobs/worker.ts
     ;;
   web|*)
+    # Apply DB migrations before serving. Only the web app does this (the worker
+    # shares the same DB) so the two deployments never race on migrate deploy.
+    echo "[entrypoint] applying database migrations (prisma migrate deploy)"
+    node_modules/.bin/prisma migrate deploy
     echo "[entrypoint] starting Next.js web server (APP_MODE=${APP_MODE:-web})"
     exec pnpm start
     ;;
