@@ -109,7 +109,14 @@ const QUICK_NAV = [
 
 export default function HomePage(): JSX.Element {
   const auth = useTrpcAuth();
-  const planQ = trpc.billing.currentPlan.useQuery(undefined, { enabled: auth.ready });
+  // refetchOnWindowFocus: when the merchant returns from Shopify's billing
+  // approval screen, the plan may have just been flipped (callback or the
+  // app_subscriptions/update webhook) — refetch so the badge updates without a
+  // manual reload.
+  const planQ = trpc.billing.currentPlan.useQuery(undefined, {
+    enabled: auth.ready,
+    refetchOnWindowFocus: true,
+  });
   const summaryQ = trpc.dashboard.summary.useQuery(undefined, { enabled: auth.ready });
   const trackerQ = trpc.dashboard.trackerStatus.useQuery(undefined, {
     enabled: auth.ready,
