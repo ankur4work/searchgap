@@ -47,11 +47,11 @@ export default function HomePage(): JSX.Element {
             position: 'relative',
             overflow: 'hidden',
             background:
-              'radial-gradient(120% 140% at 0% 0%, #4f46e5 0%, #6d28d9 35%, #1e1b4b 100%)',
+              'radial-gradient(120% 140% at 0% 0%, #059669 0%, #047857 35%, #022c22 100%)',
             borderRadius: 16,
             padding: '36px 40px',
             color: '#fff',
-            boxShadow: '0 8px 24px rgba(79,70,229,0.22)',
+            boxShadow: '0 8px 24px rgba(5,150,105,0.22)',
           }}
         >
           <div
@@ -63,7 +63,7 @@ export default function HomePage(): JSX.Element {
               width: 280,
               height: 280,
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(236,72,153,0.45) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(163,230,53,0.45) 0%, transparent 70%)',
               filter: 'blur(20px)',
               pointerEvents: 'none',
             }}
@@ -98,7 +98,7 @@ export default function HomePage(): JSX.Element {
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    background: '#22d3ee',
+                    background: '#a3e635',
                   }}
                 />
                 LIVE · capturing every search
@@ -134,7 +134,7 @@ export default function HomePage(): JSX.Element {
                   onClick={() => navigate('/dashboard')}
                   style={{
                     background: '#fff',
-                    color: '#4f46e5',
+                    color: '#059669',
                     fontSize: 14,
                     fontWeight: 700,
                     padding: '10px 18px',
@@ -246,7 +246,7 @@ export default function HomePage(): JSX.Element {
                       width: 48,
                       height: 48,
                       borderRadius: 24,
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      background: 'linear-gradient(135deg, #10b981, #14b8a6)',
                       color: '#fff',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -254,7 +254,7 @@ export default function HomePage(): JSX.Element {
                       fontSize: 18,
                       fontWeight: 800,
                       marginBottom: 12,
-                      boxShadow: '0 4px 12px rgba(99,102,241,0.30)',
+                      boxShadow: '0 4px 12px rgba(16,185,129,0.30)',
                     }}
                   >
                     {step.num}

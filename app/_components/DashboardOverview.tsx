@@ -127,7 +127,7 @@ function SyncProgressPanel({
                 : effectiveStatus === 'FAILED'
                   ? '#dc2626'
                   : effectiveStatus === 'RUNNING'
-                    ? '#2563eb'
+                    ? '#059669'
                     : '#6d7175';
 
             return (
@@ -273,8 +273,8 @@ export function DashboardOverview({
   };
 
   const statusAccent = syncReady ? '#16a34a' : '#d97706';
-  const planAccent = '#2563eb';
-  const queriesAccent = '#0ea5e9';
+  const planAccent = '#059669';
+  const queriesAccent = '#14b8a6';
   const revenueAccent = revenueImpactCents > 0 ? '#dc2626' : '#6d7175';
 
   return (
@@ -288,7 +288,7 @@ export function DashboardOverview({
                 width: 56,
                 height: 56,
                 borderRadius: 12,
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: 'linear-gradient(135deg, #10b981, #14b8a6)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -386,7 +386,7 @@ export function DashboardOverview({
                 href="/pricing"
                 style={{
                   textDecoration: 'none',
-                  color: '#2563eb',
+                  color: '#059669',
                   fontWeight: 600,
                   fontSize: 14,
                   whiteSpace: 'nowrap',

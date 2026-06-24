@@ -19,12 +19,12 @@ const PAGE_STYLE: React.CSSProperties = {
 };
 
 const HERO_STYLE: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+  background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
   color: '#fff',
   borderRadius: 16,
   padding: '36px 40px',
   marginBottom: 32,
-  boxShadow: '0 8px 24px rgba(79, 70, 229, 0.18)',
+  boxShadow: '0 8px 24px rgba(5, 150, 105, 0.18)',
 };
 
 const CARD_STYLE: React.CSSProperties = {

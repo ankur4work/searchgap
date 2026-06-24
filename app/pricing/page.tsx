@@ -86,7 +86,7 @@ export default function PricingPage(): JSX.Element {
             style={{
               flex: '1 1 320px',
               minWidth: 280,
-              border: plan === 'FREE' ? '2px solid #2563eb' : '1px solid #e1e3e5',
+              border: plan === 'FREE' ? '2px solid #059669' : '1px solid #e1e3e5',
               borderRadius: 14,
               padding: '28px 30px',
               background: '#fff',
@@ -99,7 +99,7 @@ export default function PricingPage(): JSX.Element {
                   position: 'absolute',
                   top: -10,
                   left: 16,
-                  background: '#2563eb',
+                  background: '#059669',
                   color: '#fff',
                   fontSize: 11,
                   fontWeight: 700,
@@ -154,14 +154,14 @@ export default function PricingPage(): JSX.Element {
             style={{
               flex: '1 1 320px',
               minWidth: 280,
-              border: plan === 'GROWTH' ? '2px solid #16a34a' : '2px solid #7c3aed',
+              border: plan === 'GROWTH' ? '2px solid #16a34a' : '2px solid #0d9488',
               borderRadius: 14,
               padding: '28px 30px',
               background:
-                plan === 'GROWTH' ? '#fff' : 'linear-gradient(180deg, #faf5ff 0%, #fff 60%)',
+                plan === 'GROWTH' ? '#fff' : 'linear-gradient(180deg, #ecfdf5 0%, #fff 60%)',
               position: 'relative',
               boxShadow:
-                plan === 'GROWTH' ? 'none' : '0 8px 24px rgba(124,58,237,0.14)',
+                plan === 'GROWTH' ? 'none' : '0 8px 24px rgba(13,148,136,0.14)',
             }}
           >
             <div
@@ -169,7 +169,7 @@ export default function PricingPage(): JSX.Element {
                 position: 'absolute',
                 top: -10,
                 left: 16,
-                background: plan === 'GROWTH' ? '#16a34a' : '#7c3aed',
+                background: plan === 'GROWTH' ? '#16a34a' : '#0d9488',
                 color: '#fff',
                 fontSize: 11,
                 fontWeight: 700,
