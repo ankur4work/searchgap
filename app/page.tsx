@@ -1,12 +1,111 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Page, BlockStack, Card, Text, Button, Divider } from '@shopify/polaris';
+import { Page, BlockStack, Card, Text, Divider } from '@shopify/polaris';
+import CountUp from 'react-countup';
 import { trpc } from '@/lib/trpc/client';
 import { useTrpcAuth } from '@/lib/trpc/provider';
 import { TrackerSetupBanner } from './_components/TrackerSetupBanner';
 import { UpgradeModal } from './_components/UpgradeModal';
+import { SearchGapLogo } from './_components/SearchGapLogo';
 import { analytics } from './_components/analytics-client';
+
+// Illustrative gap rows for the hero preview (shown before real data exists).
+const PREVIEW_GAPS = [
+  { q: 'waterproof jacket', type: 'Missing', meta: '42 searches · 0 results', val: 1240, fg: '#dc2626', bg: '#fee2e2' },
+  { q: 'trail running shoes 12', type: 'Wrong match', meta: '28 searches · low CTR', val: 680, fg: '#b45309', bg: '#fef3c7' },
+  { q: 'merino base layer', type: 'Low interest', meta: '19 searches', val: 310, fg: '#475569', bg: '#e2e8f0' },
+] as const;
+
+const STEPS = [
+  { icon: '🧩', title: 'Install tracker', subtitle: 'Auto-injected on install' },
+  { icon: '🔄', title: 'Sync catalog', subtitle: 'Products + 90d orders' },
+  { icon: '🔍', title: 'Capture searches', subtitle: 'Storefront events in real time' },
+  { icon: '🏷️', title: 'Classify gaps', subtitle: 'Missing / Wrong match / Low interest' },
+  { icon: '💰', title: 'Recover revenue', subtitle: 'Add products, fix synonyms' },
+] as const;
+
+const HOW_IT_WORKS = [
+  {
+    icon: '🛰️',
+    title: 'Storefront tracker',
+    body: 'A 2KB script captures every shopper search — what they typed, how many results came back, whether they clicked anything. Auto-installs, no code.',
+  },
+  {
+    icon: '🎯',
+    title: 'Catalog matching',
+    body: 'Each query is matched against your products with fuzzy + semantic search. Misses become “missing product” opportunities; weak matches become “wrong match” opportunities.',
+  },
+  {
+    icon: '📈',
+    title: 'Revenue estimation',
+    body: 'Monthly volume × your AOV × your category’s benchmark conversion rate = the revenue at risk for each gap, ranked.',
+  },
+] as const;
+
+const BEST_PRACTICES = [
+  {
+    title: 'Shopper searches track automatically',
+    body: (
+      <>
+        Storefront searches are captured in real time and analyzed daily — you don&rsquo;t need to do
+        anything. Hit <strong>Refresh data</strong> on the dashboard after a product launch, a price
+        drop, or anytime you&rsquo;ve added new SKUs so gap detection re-scores against the new
+        catalog. Revenue numbers stabilize once you have <strong>50+ monthly searches</strong> —
+        below that, the dashboard shows volume but holds back $ estimates because the sample is too
+        small to trust.
+      </>
+    ),
+  },
+  {
+    title: 'Tackle Missing products first',
+    body: (
+      <>
+        These are searches that returned <strong>zero results</strong> — pure buying intent that hit
+        a wall. Each one is a customer who tried to spend money on your store. Adding the right SKU
+        (or a category page that catches it) is the single highest-leverage fix in this app: one new
+        product can recover the revenue from dozens of failed searches per month.
+      </>
+    ),
+  },
+  {
+    title: 'Fix Wrong matches with synonyms',
+    body: (
+      <>
+        Shoppers found products but nobody clicked — usually because Shopify surfaced the wrong
+        items. Open <strong>Shopify Search &amp; Discovery</strong> and add the suggested synonym
+        (e.g. &ldquo;tee shirt&rdquo; → &ldquo;t-shirt&rdquo;). The next time someone searches that
+        term, the relevant product ranks first.
+      </>
+    ),
+  },
+  {
+    title: 'Re-check after every catalog change',
+    body: (
+      <>
+        New collections, seasonal launches, or even renaming products can create fresh search gaps
+        overnight. Make a habit of opening SearchGap within 48 hours of any catalog shift — that&rsquo;s
+        when the highest-impact gaps surface and the easiest wins are still on the table.
+      </>
+    ),
+  },
+  {
+    title: 'Watch the trend, not single days',
+    body: (
+      <>
+        A query showing up once is noise. A query showing up <strong>10+ times in the last 30
+        days</strong> is signal. The dashboard ranks gaps by occurrence × benchmark conversion rate ×
+        your AOV — high-occurrence gaps are always the right place to start.
+      </>
+    ),
+  },
+] as const;
+
+const QUICK_NAV = [
+  { path: '/dashboard', icon: '📊', title: 'Dashboard', desc: 'Live status, real searches, revenue gaps and fixes.' },
+  { path: '/pricing', icon: '💎', title: 'Pricing', desc: 'Compare Free vs Growth — start a 14-day free trial any time.' },
+  { path: '/methodology', icon: '📖', title: 'Methodology', desc: 'How we classify gaps and estimate the revenue at risk.' },
+] as const;
 
 export default function HomePage(): JSX.Element {
   const auth = useTrpcAuth();
@@ -41,17 +140,17 @@ export default function HomePage(): JSX.Element {
   return (
     <Page fullWidth>
       <BlockStack gap="500">
-        {/* HERO */}
+        {/* ───────────────────────── HERO ───────────────────────── */}
         <div
           style={{
             position: 'relative',
             overflow: 'hidden',
             background:
               'radial-gradient(120% 140% at 0% 0%, #059669 0%, #047857 35%, #022c22 100%)',
-            borderRadius: 16,
-            padding: '36px 40px',
+            borderRadius: 18,
+            padding: '34px 40px',
             color: '#fff',
-            boxShadow: '0 8px 24px rgba(5,150,105,0.22)',
+            boxShadow: '0 10px 30px rgba(5,150,105,0.28)',
           }}
         >
           <div
@@ -60,10 +159,10 @@ export default function HomePage(): JSX.Element {
               position: 'absolute',
               right: -80,
               top: -80,
-              width: 280,
-              height: 280,
+              width: 300,
+              height: 300,
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(163,230,53,0.45) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(163,230,53,0.40) 0%, transparent 70%)',
               filter: 'blur(20px)',
               pointerEvents: 'none',
             }}
@@ -74,10 +173,18 @@ export default function HomePage(): JSX.Element {
               display: 'flex',
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: 28,
+              gap: 32,
             }}
           >
+            {/* LEFT */}
             <div style={{ flex: '1 1 460px', minWidth: 280 }}>
+              {/* brand lockup */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16 }}>
+                <SearchGapLogo size={30} />
+                <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3 }}>
+                  Search<span style={{ color: '#a3e635' }}>Gap</span>
+                </span>
+              </div>
               <div
                 style={{
                   display: 'inline-flex',
@@ -93,19 +200,12 @@ export default function HomePage(): JSX.Element {
                   marginBottom: 14,
                 }}
               >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: '#a3e635',
-                  }}
-                />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#a3e635' }} />
                 LIVE · capturing every search
               </div>
               <h1
                 style={{
-                  fontSize: 32,
+                  fontSize: 33,
                   lineHeight: 1.1,
                   fontWeight: 800,
                   margin: 0,
@@ -116,18 +216,10 @@ export default function HomePage(): JSX.Element {
                 Find the searches that{' '}
                 <span style={{ color: '#fbbf24' }}>cost you sales.</span>
               </h1>
-              <p
-                style={{
-                  fontSize: 16,
-                  lineHeight: 1.5,
-                  margin: 0,
-                  opacity: 0.92,
-                  maxWidth: 580,
-                }}
-              >
+              <p style={{ fontSize: 16, lineHeight: 1.5, margin: 0, opacity: 0.92, maxWidth: 580 }}>
                 Every &ldquo;0 results&rdquo; on your storefront is a buyer with intent who walked
-                away. SearchGap surfaces every missed query, ranks them by revenue impact, and
-                tells you exactly what to fix — usually within minutes of install.
+                away. SearchGap surfaces every missed query, ranks them by revenue impact, and tells
+                you exactly what to fix — usually within minutes of install.
               </p>
               <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 <button
@@ -164,35 +256,106 @@ export default function HomePage(): JSX.Element {
                   </button>
                 )}
               </div>
+              {/* trust strip (replaces the old plain stat boxes) */}
+              <div
+                style={{
+                  marginTop: 18,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 18,
+                  fontSize: 12.5,
+                  opacity: 0.85,
+                }}
+              >
+                <span>⚡ Real-time tracker, no code</span>
+                <span>⏱️ &lt; 1 min to first sync</span>
+                <span>💵 Gaps ranked by revenue</span>
+              </div>
             </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(96px, 1fr))',
-                gap: 12,
-                minWidth: 320,
-                flex: '0 1 360px',
-              }}
-            >
-              {[
-                { v: 'Real-time', l: 'tracker, no code needed' },
-                { v: '< 1 min', l: 'install → first sync' },
-                { v: '$ ranked', l: 'gaps by revenue lift' },
-              ].map((s) => (
+
+            {/* RIGHT — dashboard preview card */}
+            <div style={{ flex: '0 1 380px', minWidth: 300 }}>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: 14,
+                  padding: 16,
+                  boxShadow: '0 12px 28px rgba(2,44,34,0.28)',
+                  color: '#202223',
+                }}
+              >
                 <div
-                  key={s.v}
                   style={{
-                    background: 'rgba(255,255,255,0.10)',
-                    border: '1px solid rgba(255,255,255,0.16)',
-                    borderRadius: 12,
-                    padding: '14px 14px',
-                    backdropFilter: 'blur(6px)',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'space-between',
+                    marginBottom: 12,
                   }}
                 >
-                  <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>{s.v}</div>
-                  <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>{s.l}</div>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>Top revenue gaps</span>
+                  <span style={{ fontSize: 11, color: '#6d7175' }}>last 30 days</span>
                 </div>
-              ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {PREVIEW_GAPS.map((g, i) => (
+                    <div
+                      key={g.q}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '9px 10px',
+                        borderRadius: 10,
+                        background: '#f6f8fa',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          “{g.q}”
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                          <span
+                            style={{
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              padding: '1px 7px',
+                              borderRadius: 999,
+                              color: g.fg,
+                              background: g.bg,
+                            }}
+                          >
+                            {g.type}
+                          </span>
+                          <span style={{ fontSize: 11, color: '#6d7175' }}>{g.meta}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#047857' }}>
+                        <CountUp end={g.val} prefix="$" separator="," duration={1.6} delay={i * 0.15} />
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#6d7175' }}>/mo</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 10,
+                    borderTop: '1px solid #e1e3e5',
+                    fontSize: 11.5,
+                    color: '#6d7175',
+                    textAlign: 'center',
+                  }}
+                >
+                  Illustrative — your real gaps appear after first sync
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -212,7 +375,7 @@ export default function HomePage(): JSX.Element {
           />
         )}
 
-        {/* HOW SEARCHGAP WORKS — 5 steps */}
+        {/* ───────────── HOW SEARCHGAP WORKS — icon stepper ───────────── */}
         <Card>
           <BlockStack gap="400">
             <Text as="h2" variant="headingMd">
@@ -222,45 +385,44 @@ export default function HomePage(): JSX.Element {
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: 24,
+                gap: 12,
                 justifyContent: 'space-between',
               }}
             >
-              {[
-                { num: 1, title: 'Install tracker', subtitle: 'Auto-injected on install' },
-                { num: 2, title: 'Sync catalog', subtitle: 'Products + 90d orders' },
-                { num: 3, title: 'Capture searches', subtitle: 'Storefront events in real time' },
-                { num: 4, title: 'Classify gaps', subtitle: 'Missing / Wrong match / Low interest' },
-                { num: 5, title: 'Recover revenue', subtitle: 'Add products, fix synonyms' },
-              ].map((step) => (
+              {STEPS.map((step, i) => (
                 <div
-                  key={step.num}
+                  key={step.title}
                   style={{
-                    flex: '1 1 160px',
-                    minWidth: 160,
+                    flex: '1 1 150px',
+                    minWidth: 150,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                     textAlign: 'center',
+                    position: 'relative',
                   }}
                 >
                   <div
                     style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      background: 'linear-gradient(135deg, #10b981, #14b8a6)',
-                      color: '#fff',
+                      width: 52,
+                      height: 52,
+                      borderRadius: 16,
+                      background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
+                      border: '1px solid #a7f3d0',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 18,
-                      fontWeight: 800,
+                      fontSize: 24,
                       marginBottom: 12,
-                      boxShadow: '0 4px 12px rgba(16,185,129,0.30)',
                     }}
                   >
-                    {step.num}
+                    {step.icon}
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{step.title}</div>
-                  <div style={{ fontSize: 13, color: '#5a6168', lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', marginBottom: 2 }}>
+                    STEP {i + 1}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{step.title}</div>
+                  <div style={{ fontSize: 12.5, color: '#5a6168', lineHeight: 1.45 }}>
                     {step.subtitle}
                   </div>
                 </div>
@@ -269,7 +431,7 @@ export default function HomePage(): JSX.Element {
           </BlockStack>
         </Card>
 
-        {/* HOW IT WORKS + BEST PRACTICES */}
+        {/* ───────── HOW IT WORKS (icon cards) + BEST PRACTICES ───────── */}
         <div
           style={{
             display: 'grid',
@@ -280,40 +442,40 @@ export default function HomePage(): JSX.Element {
         >
           <div style={{ display: 'flex' }}>
             <Card>
-              <BlockStack gap="300">
+              <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
                   How it works
                 </Text>
                 <Divider />
                 <BlockStack gap="300">
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      1. Storefront tracker
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      A 2KB script captures every shopper search — what they typed, how many
-                      results came back, whether they clicked anything. Auto-installs, no code.
-                    </Text>
-                  </div>
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      2. Catalog matching
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Each query is matched against your products with fuzzy + semantic search.
-                      Misses become &ldquo;missing product&rdquo; opportunities; weak matches
-                      become &ldquo;wrong match&rdquo; opportunities.
-                    </Text>
-                  </div>
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      3. Revenue estimation
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Monthly volume × your AOV × your category&rsquo;s benchmark conversion rate
-                      = the revenue at risk for each gap, ranked.
-                    </Text>
-                  </div>
+                  {HOW_IT_WORKS.map((item) => (
+                    <div key={item.title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div
+                        style={{
+                          flex: '0 0 auto',
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 18,
+                        }}
+                      >
+                        {item.icon}
+                      </div>
+                      <div>
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">
+                          {item.title}
+                        </Text>
+                        <Text as="p" variant="bodyMd" tone="subdued">
+                          {item.body}
+                        </Text>
+                      </div>
+                    </div>
+                  ))}
                 </BlockStack>
               </BlockStack>
             </Card>
@@ -321,76 +483,42 @@ export default function HomePage(): JSX.Element {
 
           <div style={{ display: 'flex' }}>
             <Card>
-              <BlockStack gap="300">
+              <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
                   Best practices
                 </Text>
                 <Divider />
-                <BlockStack gap="400">
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      ✓ Shopper searches track automatically
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Storefront searches are captured in real time and analyzed daily — you
-                      don&rsquo;t need to do anything. Hit <strong>Refresh data</strong> on the
-                      dashboard after a product launch, a price drop, or anytime you&rsquo;ve added
-                      new SKUs so gap detection re-scores against the new catalog. Revenue numbers
-                      stabilize once you have <strong>50+ monthly searches</strong> — below that,
-                      the dashboard shows volume but holds back $ estimates because the sample is
-                      too small to trust.
-                    </Text>
-                  </div>
-
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      ✓ Tackle Missing products first
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      These are searches that returned <strong>zero results</strong> — pure
-                      buying intent that hit a wall. Each one is a customer who tried to spend
-                      money on your store. Adding the right SKU (or a category page that catches
-                      it) is the single highest-leverage fix in this app: one new product can
-                      recover the revenue from dozens of failed searches per month.
-                    </Text>
-                  </div>
-
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      ✓ Fix Wrong matches with synonyms
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Shoppers found products but nobody clicked — usually because Shopify
-                      surfaced the wrong items. Open <strong>Shopify Search &amp; Discovery</strong>
-                      and add the suggested synonym (e.g. &ldquo;tee shirt&rdquo; →
-                      &ldquo;t-shirt&rdquo;). The next time someone searches that term, the
-                      relevant product ranks first.
-                    </Text>
-                  </div>
-
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      ✓ Re-check after every catalog change
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      New collections, seasonal launches, or even renaming products can create
-                      fresh search gaps overnight. Make a habit of opening SearchGap within 48
-                      hours of any catalog shift — that&rsquo;s when the highest-impact gaps
-                      surface and the easiest wins are still on the table.
-                    </Text>
-                  </div>
-
-                  <div>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      ✓ Watch the trend, not single days
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      A query showing up once is noise. A query showing up <strong>10+ times in
-                      the last 30 days</strong> is signal. The dashboard ranks gaps by occurrence
-                      × benchmark conversion rate × your AOV — high-occurrence gaps are
-                      always the right place to start.
-                    </Text>
-                  </div>
+                <BlockStack gap="300">
+                  {BEST_PRACTICES.map((bp) => (
+                    <div key={bp.title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <span
+                        style={{
+                          flex: '0 0 auto',
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          background: '#059669',
+                          color: '#fff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          marginTop: 1,
+                        }}
+                      >
+                        ✓
+                      </span>
+                      <div>
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">
+                          {bp.title}
+                        </Text>
+                        <Text as="p" variant="bodyMd" tone="subdued">
+                          {bp.body}
+                        </Text>
+                      </div>
+                    </div>
+                  ))}
                 </BlockStack>
               </BlockStack>
             </Card>
@@ -399,11 +527,7 @@ export default function HomePage(): JSX.Element {
 
         {/* QUICK NAV CARDS */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          {[
-            { path: '/dashboard', icon: '📊', title: 'Dashboard', desc: 'Live status, real searches, revenue gaps and fixes.' },
-            { path: '/pricing',   icon: '💎', title: 'Pricing',   desc: 'Compare Free vs Growth — start a 14-day free trial any time.' },
-            { path: '/methodology', icon: '📖', title: 'Methodology', desc: 'How we classify gaps and estimate the revenue at risk.' },
-          ].map(({ path, icon, title, desc }) => (
+          {QUICK_NAV.map(({ path, icon, title, desc }) => (
             <button
               key={path}
               onClick={() => navigate(path)}
@@ -420,8 +544,12 @@ export default function HomePage(): JSX.Element {
               }}
             >
               <div style={{ fontSize: 24, marginBottom: 10 }}>{icon}</div>
-              <Text as="h3" variant="headingMd">{title}</Text>
-              <Text as="p" tone="subdued" variant="bodyMd">{desc}</Text>
+              <Text as="h3" variant="headingMd">
+                {title}
+              </Text>
+              <Text as="p" tone="subdued" variant="bodyMd">
+                {desc}
+              </Text>
             </button>
           ))}
         </div>
