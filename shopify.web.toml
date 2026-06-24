@@ -1,0 +1,6 @@
+name = "searchgap-web"
+roles = ["frontend", "backend"]
+webhooks_path = "/webhooks"
+
+[commands]
+dev = "pnpm dev"

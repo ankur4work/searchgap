@@ -1,0 +1,26 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+.env
+.env.*
+!.env.example
+# Shopify CLI cache + dead-account deploy bundles (may contain tokens)
+.shopify
+.shopify*
+debug-classify.cjs
+*.log
+.DS_Store
+.vscode/
+.idea/
+coverage/
+.turbo/
+prisma/*.db
+prisma/*.db-journal
+next-env.d.ts
+.claude/
+.claude
+tsconfig.tsbuildinfo
+shopify.app.local.toml
+test-data/

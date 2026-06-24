@@ -1,0 +1,35 @@
+{%- comment -%}
+  SearchGap Storefront Tracker — app embed block.
+
+  Once a merchant installs SearchGap and enables this embed in their theme
+  editor (Theme → App embeds → toggle "SearchGap Storefront Tracker"), the
+  script below loads on every page and captures every storefront search:
+  what shoppers typed, how many results came back, whether they clicked.
+
+  No PII is captured — only the query string, result count, and a timestamp.
+  See https://searchgap.solnix.store/methodology for full details.
+{%- endcomment -%}
+
+{% if block.settings.enabled %}
+  <script
+    src="https://searchgap.solnix.store/tracker.js"
+    defer
+    data-searchgap="storefront-tracker"
+  ></script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "SearchGap Tracker",
+  "target": "head",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable storefront search tracking",
+      "default": true,
+      "info": "Captures shopper search queries to surface revenue gaps. Required for SearchGap to work."
+    }
+  ]
+}
+{% endschema %}
