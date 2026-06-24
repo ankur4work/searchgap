@@ -140,6 +140,7 @@ export default function DashboardPage(): JSX.Element {
           <TrackerSetupBanner
             shopDomain={s.shopDomain}
             embedEnabled={trackerQ.data?.enabled ?? null}
+            passwordProtected={trackerQ.data?.passwordProtected ?? null}
           />
         )}
 

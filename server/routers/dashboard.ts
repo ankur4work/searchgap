@@ -147,16 +147,38 @@ export const dashboardRouter = router({
     }),
 
   trackerStatus: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session?.storeId) return { enabled: null as boolean | null };
+    const NULL_STATUS = { enabled: null as boolean | null, passwordProtected: null as boolean | null };
+    if (!ctx.session?.storeId) return NULL_STATUS;
     const storeId = ctx.session.storeId;
-    const cacheKey = `dash:tracker-status:v4:${storeId}`;
+    const cacheKey = `dash:tracker-status:v5:${storeId}`;
     return getOrCompute(cacheKey, 300, async () => {
+      const store = await ctx.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { shopDomain: true, accessToken: true },
+      });
+      if (!store) return NULL_STATUS;
+
+      // Is the storefront password-protected? A locked storefront 302-redirects
+      // its root to /password. We surface this so the app can warn the merchant
+      // (their test searches + "Open storefront" can't work while it's locked)
+      // instead of silently dead-ending them on Shopify's password gate.
+      // null = couldn't determine (network/error); don't show the warning then.
+      let passwordProtected: boolean | null = null;
       try {
-        const store = await ctx.prisma.store.findUnique({
-          where: { id: storeId },
-          select: { shopDomain: true, accessToken: true },
+        const sfRes = await fetch(`https://${store.shopDomain}/`, {
+          method: 'GET',
+          redirect: 'manual',
+          headers: { 'User-Agent': 'SearchGap-Tracker-Check' },
         });
-        if (!store) return { enabled: null as boolean | null };
+        const loc = sfRes.headers.get('location') ?? '';
+        passwordProtected =
+          (sfRes.status >= 300 && sfRes.status < 400 && /\/password(\b|\/|$)/.test(loc)) ||
+          sfRes.url.endsWith('/password');
+      } catch {
+        passwordProtected = null;
+      }
+
+      try {
         const token = decrypt(store.accessToken);
         const headers = {
           'X-Shopify-Access-Token': token,
@@ -167,19 +189,19 @@ export const dashboardRouter = router({
           `https://${store.shopDomain}/admin/api/${ADMIN_API_VERSION}/themes.json?role=main`,
           { headers },
         );
-        if (!themesRes.ok) return { enabled: null as boolean | null };
+        if (!themesRes.ok) return { enabled: null as boolean | null, passwordProtected };
 
         const themesData = (await themesRes.json()) as {
           themes: Array<{ id: number; role: string }>;
         };
         const mainTheme = themesData.themes.find((t) => t.role === 'main');
-        if (!mainTheme) return { enabled: null as boolean | null };
+        if (!mainTheme) return { enabled: null as boolean | null, passwordProtected };
 
         const assetRes = await fetch(
           `https://${store.shopDomain}/admin/api/${ADMIN_API_VERSION}/themes/${mainTheme.id}/assets.json?asset[key]=config/settings_data.json`,
           { headers },
         );
-        if (!assetRes.ok) return { enabled: null as boolean | null };
+        if (!assetRes.ok) return { enabled: null as boolean | null, passwordProtected };
 
         const assetData = (await assetRes.json()) as { asset: { value: string } };
 
@@ -215,10 +237,10 @@ export const dashboardRouter = router({
           'trackerStatus check',
         );
 
-        if (!trackerBlock) return { enabled: false };
-        return { enabled: trackerBlock.disabled !== true };
+        if (!trackerBlock) return { enabled: false, passwordProtected };
+        return { enabled: trackerBlock.disabled !== true, passwordProtected };
       } catch {
-        return { enabled: null as boolean | null };
+        return { enabled: null as boolean | null, passwordProtected };
       }
     });
   }),

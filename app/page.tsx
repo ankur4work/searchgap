@@ -372,6 +372,7 @@ export default function HomePage(): JSX.Element {
           <TrackerSetupBanner
             shopDomain={summaryQ.data.shopDomain}
             embedEnabled={trackerQ.data?.enabled ?? null}
+            passwordProtected={trackerQ.data?.passwordProtected ?? null}
           />
         )}
 
