@@ -7,7 +7,11 @@
 FROM node:20-alpine AS base
 # OpenSSL: required at runtime by Prisma's query engine on Alpine.
 # libc6-compat: required by some native modules (sharp, msgpackr-extract).
-RUN apk add --no-cache openssl libc6-compat
+# libstdc++/libgomp/gcompat: required by onnxruntime-node (used by
+# @xenova/transformers for embeddings). The prebuilt ONNX binary is glibc-linked
+# and uses OpenMP; without these it abort()s with SIGABRT on musl/Alpine, which
+# disables semantic product matching. See lib/ingestion/embed-worker.mjs.
+RUN apk add --no-cache openssl libc6-compat libstdc++ libgomp gcompat
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 # Pin pnpm store to a known path so BuildKit cache mounts can target it
 # directly (default lives under $HOME which moves with USER directives).
