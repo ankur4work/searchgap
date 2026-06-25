@@ -7,7 +7,7 @@ import { startRun, finishRun } from '@/lib/ingestion/runs';
 import { ShopifyAuthError } from '@/lib/shopify/client';
 import { isTokenExpired } from '@/lib/shopify/store';
 import type { IngestionJobData } from '../queue';
-import { ingestionQueue } from '../queue';
+import { ingestionQueue, classifyQueue } from '../queue';
 
 const AUTH_RETRY_DELAY_MS = 5 * 60 * 1000;
 
@@ -47,6 +47,17 @@ export async function ingestProductsProcessor(job: Job<IngestionJobData>): Promi
     try {
       await ingestProducts(store, { force, runId: run.id });
       await finishRun(run.id, 'DONE');
+      // Re-classify against the FRESH catalog. The backfill enqueues products,
+      // orders and search in parallel; search ingest is fast and triggers an
+      // early classify that races ahead of the slow product bulk-import — so
+      // that run sees a stale catalog and produces no keyword fixes (TYPE_2).
+      // Triggering classify here, after the catalog is written, guarantees a
+      // pass with the up-to-date products. Dedup by jobId.
+      await classifyQueue.add(
+        'classify:store',
+        { storeId, origin: 'post-ingest' },
+        { jobId: `classify-${storeId}-${Date.now()}` },
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       await finishRun(run.id, 'FAILED', msg);
