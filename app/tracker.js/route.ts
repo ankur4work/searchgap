@@ -55,8 +55,25 @@ function buildTracker(endpoint: string): string {
   // and AJAX /search? load), which would inflate occurrenceCount for one search.
   var recentSubmits = {};
 
+  // Respect shopper tracking consent. Shopify's Customer Privacy API exposes
+  // the visitor's consent decision; when a consent framework is active (e.g.
+  // GDPR regions) and analytics processing is NOT allowed, we must not capture
+  // the search. If the API isn't present, no consent framework is in effect for
+  // this visitor, so tracking proceeds. Best-effort + fail-open on errors so a
+  // privacy-API hiccup never silently drops a legitimate region's data.
+  function trackingAllowed() {
+    try {
+      var cp = window.Shopify && window.Shopify.customerPrivacy;
+      if (cp && typeof cp.analyticsProcessingAllowed === 'function') {
+        return cp.analyticsProcessingAllowed() === true;
+      }
+      return true;
+    } catch (e) { return true; }
+  }
+
   function send(payload) {
     try {
+      if (!trackingAllowed()) return;
       if (payload && payload.event === 'search_submitted') {
         var dedupeKey = String(payload.query || '').trim().toLowerCase();
         var nowTs = Date.now();

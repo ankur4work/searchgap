@@ -12,7 +12,7 @@ import { ingestionQueue } from '../queue';
 const AUTH_RETRY_DELAY_MS = 5 * 60 * 1000;
 
 export async function ingestOrdersProcessor(job: Job<IngestionJobData>): Promise<void> {
-  const { storeId, sinceDays = 90 } = job.data;
+  const { storeId, sinceDays = 60 } = job.data;
   const mutex = await acquireStoreMutex(storeId, 600, 'orders');
   if (!mutex) {
     logger.info({ storeId, jobId: job.id }, 'Store locked — re-enqueueing orders sync');

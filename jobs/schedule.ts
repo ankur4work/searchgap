@@ -8,7 +8,7 @@ import {
 } from './queue';
 
 /**
- * Enqueue one-off backfill jobs (30d search, 90d orders, full product sync).
+ * Enqueue one-off backfill jobs (30d search, 60d orders, full product sync).
  * Used at install time AND for on-demand "Sync now" clicks. Each call uses a
  * unique jobId (timestamped) so BullMQ doesn't dedupe a re-sync.
  */
@@ -22,7 +22,7 @@ export async function enqueueInstallBackfill(storeId: string): Promise<void> {
   );
   await ingestionQueue.add(
     'ingest:orders' satisfies IngestionJobName,
-    { storeId, sinceDays: 90, ...common } satisfies IngestionJobData,
+    { storeId, sinceDays: 60, ...common } satisfies IngestionJobData,
     { jobId: `sync-${storeId}-orders-${ts}` },
   );
   await ingestionQueue.add(
@@ -58,7 +58,7 @@ export async function seedCronJobs(): Promise<void> {
     );
     await ingestionQueue.add(
       'ingest:orders',
-      { storeId, sinceDays: 90, origin: cron },
+      { storeId, sinceDays: 60, origin: cron },
       { repeat: { pattern: '0 3 * * *' }, jobId: `cron-${storeId}-orders` },
     );
     // Products: stagger every N minutes across the hour to smooth load.

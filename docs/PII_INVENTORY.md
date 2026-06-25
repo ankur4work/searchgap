@@ -10,7 +10,7 @@ quarterly; last review 2026-04-22.
 | Offline access token | `stores.access_token` | OAuth exchange | Call Shopify API | Deleted on uninstall | **AES-256-GCM encrypted**, only decrypted in process memory |
 | Product metadata | `catalog_products.*` | Shopify Admin API | Match queries to products | 24h rolling sync | App code |
 | Search query strings | `search_queries.query` | Shopify Search analytics | Classification input | 30d rolling | App code |
-| Order aggregates | computed → `stores.aov_cents` | Shopify Admin API | Revenue formula | 90d window (aggregates only) | App code |
+| Order aggregates | computed → `stores.aov_cents` | Shopify Admin API | Revenue formula | 60d window (aggregates only) | App code |
 | Classifications | `classifications.*` | Computed | Dashboard | Life of install + 30d | Merchant (own shop only) |
 | Billing events | `billing_events.*` | Shopify Billing | Audit | Life of install + 7y (tax) | App code, admin UI |
 | Digest send history | `digest_log.*` | App | Dedup + unsubscribe audit | 2 years | App code |
