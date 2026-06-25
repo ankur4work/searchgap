@@ -49,6 +49,9 @@ const EnvSchema = z.object({
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
   ADMIN_EMAILS: z.string().default(''),
+  // Shared secret required (in production) on admin/ops routes in addition to
+  // the admin email — so a known email alone can't reach /admin or reingest.
+  ADMIN_BEARER: z.string().default(''),
   PRIVACY_CONTACT_EMAIL: z.string().email().default('privacy@searchgap.solnix.store'),
   DPA_URL: z.string().url().optional(),
 
@@ -97,6 +100,7 @@ const BUILD_STUB: Env = {
   GROWTH_PLAN_TRIAL_DAYS: 14,
   SENTRY_TRACES_SAMPLE_RATE: 0.1,
   ADMIN_EMAILS: '',
+  ADMIN_BEARER: '',
   PRIVACY_CONTACT_EMAIL: 'privacy@build.invalid',
   RATE_LIMIT_MERCHANT_PER_MIN: 100,
   RATE_LIMIT_PUBLIC_PER_MIN: 30,

@@ -25,6 +25,17 @@ export function requireAdminForRoute(req: NextRequest): NextResponse | null {
   // `X-Admin-Email` expected to be set by the upstream auth proxy
   // (Cloudflare Access / Coolify BasicAuth + email header). Dev path bypasses.
   const email = req.headers.get('x-admin-email');
-  if (isAdmin(email)) return null;
-  return NextResponse.json({ error: 'admin only' }, { status: 403 });
+  if (!isAdmin(email)) {
+    return NextResponse.json({ error: 'admin only' }, { status: 403 });
+  }
+  // Defense in depth: in production the email header alone is client-spoofable
+  // (no upstream proxy authenticates it in this deployment), so also require a
+  // shared secret bearer. ADMIN_BEARER must be set or prod admin stays closed.
+  if (env.NODE_ENV === 'production') {
+    const bearer = req.headers.get('x-admin-bearer');
+    if (!env.ADMIN_BEARER || bearer !== env.ADMIN_BEARER) {
+      return NextResponse.json({ error: 'admin only' }, { status: 403 });
+    }
+  }
+  return null;
 }
