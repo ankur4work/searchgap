@@ -10,7 +10,7 @@ export const metadata = {
 const PRIVACY_MD = `
 # Privacy Policy
 
-_Last updated: 22 April 2026_
+_Last updated: 25 June 2026_
 
 SearchGap (the "Service") is a Shopify app that analyses search
 queries shoppers type into your storefront and shows you the product gaps +
@@ -25,8 +25,8 @@ and for how long.
 | Merchant email | Shopify \`shop\` query | Digest delivery + support | Life of install + 30 days |
 | Shopify offline access token | OAuth exchange | Call Shopify APIs on your behalf | AES-256-GCM encrypted; deleted on uninstall |
 | Product catalog metadata | Shopify Admin API | Match shopper queries to products | Refreshed every 24h; deleted on uninstall |
-| Search query strings + counts | Shopify Search & Discovery analytics | Classify + rank the gaps | 30-day rolling window |
-| Order aggregates (count, total) | Shopify Admin API | Compute AOV for revenue estimates | 90 days; no individual order details retained |
+| Search query strings + counts | Shopper searches on your storefront, captured by our tracker (only when shopper consent allows) | Classify + rank the gaps | 30-day rolling window |
+| Order aggregates (count, total) | Shopify Admin API | Compute AOV for revenue estimates | 60 days; no individual order details retained |
 | Classifications + revenue estimates | Computed by us | Power the dashboard | Life of install + 30 days |
 
 ## What we do NOT store
@@ -37,6 +37,15 @@ and for how long.
   card information.
 - **Free-text messages.** The app has no chat or comments — there's nothing
   to log.
+
+## Shopper tracking and consent
+
+Search tracking on your storefront respects each shopper's consent decision.
+Where a consent framework is active (for example, in regions that require it),
+our tracker checks Shopify's Customer Privacy API and does **not** record a
+search when the shopper has not allowed analytics processing. The tracker only
+ever records the search text, the number of results, and a timestamp — never
+anything that identifies the shopper.
 
 ## How long we keep it
 
