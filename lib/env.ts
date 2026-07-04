@@ -41,7 +41,12 @@ const EnvSchema = z.object({
   POSTHOG_HOST: z.string().url().default('https://app.posthog.com'),
 
   // Billing
-  BILLING_TEST_MODE: z.coerce.boolean().default(false),
+  // NOTE: do NOT use z.coerce.boolean() — it runs Boolean("false") === true,
+  // so the string "false" would keep test mode ON. Parse the literal instead.
+  BILLING_TEST_MODE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   GROWTH_PLAN_PRICE_USD: z.coerce.number().positive().default(9),
   GROWTH_PLAN_TRIAL_DAYS: z.coerce.number().int().positive().default(14),
 
