@@ -1,8 +1,8 @@
 # Shopify App Store listing copy — SearchGap (June 2026 submission)
 
 Copy verified against form limits and current app behavior (two plans: Free /
-Growth $9 with 14-day trial; read-only scopes; no synonym write-back — keyword
-fixes are suggestions, not one-click sync).
+Growth $9, no trial — billed on approval, cancel anytime; read-only scopes; no
+synonym write-back — keyword fixes are suggestions, not one-click sync).
 
 ## App name (30 max — 11 used)
 
@@ -43,7 +43,7 @@ guideline violation. Build a public demo store later if conversion matters.)
 | | Free | Growth |
 |---|---|---|
 | Monthly | $0 | $9 |
-| Trial | — | 14 days |
+| Trial | — | — |
 | Gaps visible | Top 5 | All |
 | Revenue estimate per gap | — | ✓ |
 | Weekly digest email | — | ✓ |

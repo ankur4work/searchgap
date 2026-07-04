@@ -34,7 +34,7 @@ export function UpgradeModal({ open, onClose, storeId }: Props): JSX.Element {
       onClose={onClose}
       title="Upgrade to Growth"
       primaryAction={{
-        content: createCharge.isPending ? 'Opening Shopify billing…' : 'Start 14-day free trial',
+        content: createCharge.isPending ? 'Opening Shopify billing…' : 'Start Growth · $9/mo',
         onAction: () => void handleUpgrade(),
         loading: createCharge.isPending,
       }}
@@ -49,7 +49,7 @@ export function UpgradeModal({ open, onClose, storeId }: Props): JSX.Element {
             <Text as="p" tone="subdued" variant="bodyMd">
               /month
             </Text>
-            <Badge tone="success">14-day free trial</Badge>
+            <Badge tone="success">Cancel anytime</Badge>
           </InlineStack>
 
           <Text as="p">Growth unlocks:</Text>

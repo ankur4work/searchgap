@@ -103,7 +103,7 @@ const BEST_PRACTICES = [
 
 const QUICK_NAV = [
   { path: '/dashboard', icon: '📊', title: 'Dashboard', desc: 'Live status, real searches, revenue gaps and fixes.' },
-  { path: '/pricing', icon: '💎', title: 'Pricing', desc: 'Compare Free vs Growth — start a 14-day free trial any time.' },
+  { path: '/pricing', icon: '💎', title: 'Pricing', desc: 'Compare Free vs Growth — upgrade any time, cancel any time.' },
   { path: '/methodology', icon: '📖', title: 'Methodology', desc: 'How we classify gaps and estimate the revenue at risk.' },
 ] as const;
 
@@ -259,7 +259,7 @@ export default function HomePage(): JSX.Element {
                       cursor: 'pointer',
                     }}
                   >
-                    Start 14-day free trial
+                    Start Growth · $9/mo
                   </button>
                 )}
               </div>

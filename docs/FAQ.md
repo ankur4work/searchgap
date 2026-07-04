@@ -56,9 +56,9 @@ via Shopify Billing API. See `docs/BFS_CHECKLIST.md` for the full audit.
 
 ## Billing
 
-**Q11. How does the free trial work?**
-14 days on Growth, billed through Shopify. Cancel from your Shopify Admin at
-any time — we don't make you email us.
+**Q11. How does billing work?**
+Growth is $9/mo, billed through Shopify as soon as you approve. Cancel from your
+Shopify Admin at any time — we don't make you email us.
 
 **Q12. What happens if I cancel?**
 You keep access until the end of the current billing period, then drop to

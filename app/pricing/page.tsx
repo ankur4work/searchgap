@@ -200,7 +200,7 @@ export default function PricingPage(): JSX.Element {
                   fontWeight: 700,
                 }}
               >
-                14-day free trial
+                Cancel anytime
               </span>
             </div>
             <ul style={{ padding: 0, listStyle: 'none', marginTop: 8 }}>
@@ -227,7 +227,7 @@ export default function PricingPage(): JSX.Element {
             {plan === 'FREE' && (
               <div style={{ marginTop: 22 }}>
                 <Button variant="primary" size="large" onClick={openUpgrade} fullWidth>
-                  Start 14-day free trial
+                  Start Growth · $9/mo
                 </Button>
                 <div style={{ fontSize: 11, color: '#6d7175', marginTop: 10, textAlign: 'center' }}>
                   Cancel anytime · Billed through Shopify · No credit card extra
@@ -257,8 +257,8 @@ export default function PricingPage(): JSX.Element {
             </Text>
             {[
               {
-                q: 'How does the 14-day trial work?',
-                a: 'You start Growth instantly. Shopify charges nothing for 14 days. Cancel from your Shopify admin any time during the trial — no charge, no questions.',
+                q: 'How does billing work?',
+                a: 'You start Growth instantly and Shopify bills $9 as soon as you approve. Cancel from your Shopify admin any time — billing stops immediately, no questions.',
               },
               {
                 q: 'What does a "gap" mean?',

@@ -48,7 +48,8 @@ const EnvSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   GROWTH_PLAN_PRICE_USD: z.coerce.number().positive().default(9),
-  GROWTH_PLAN_TRIAL_DAYS: z.coerce.number().int().positive().default(14),
+  // nonnegative (not positive) so a 0-day trial — charge immediately — is valid.
+  GROWTH_PLAN_TRIAL_DAYS: z.coerce.number().int().nonnegative().default(0),
 
   // Observability & ops (optional at boot so dev works out of the box).
   SENTRY_DSN: z.string().url().optional(),
@@ -102,7 +103,7 @@ const BUILD_STUB: Env = {
   POSTHOG_HOST: 'https://app.posthog.com',
   BILLING_TEST_MODE: false,
   GROWTH_PLAN_PRICE_USD: 9,
-  GROWTH_PLAN_TRIAL_DAYS: 14,
+  GROWTH_PLAN_TRIAL_DAYS: 0,
   SENTRY_TRACES_SAMPLE_RATE: 0.1,
   ADMIN_EMAILS: '',
   ADMIN_BEARER: '',

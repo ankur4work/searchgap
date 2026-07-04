@@ -378,7 +378,7 @@ export function DashboardOverview({
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
                 Free shows your top 5 gaps. Growth unlocks every gap with $ revenue estimates and
-                1-click synonym sync. $9/mo, 14-day free trial.
+                1-click synonym sync. $9/mo, cancel anytime.
               </Text>
             </BlockStack>
             <InlineStack gap="200">
