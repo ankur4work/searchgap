@@ -4,11 +4,14 @@ import { NextRequest } from 'next/server';
 
 const SECRET = process.env.SHOPIFY_API_SECRET!;
 
-const storeUpdate = vi.fn(async () => ({ id: 'store1' }));
-const billingEventCreate = vi.fn(async () => ({ id: 'evt1' }));
-const billingEventFindFirst = vi.fn(async () => null);
-const storeFindUnique = vi.fn(async () => ({ id: 'store1', shopDomain: 'shop.myshopify.com', plan: 'FREE' }));
-const $transaction = vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops));
+const { storeUpdate, billingEventCreate, billingEventFindFirst, storeFindUnique, $transaction } =
+  vi.hoisted(() => ({
+    storeUpdate: vi.fn(async () => ({ id: 'store1' })),
+    billingEventCreate: vi.fn(async () => ({ id: 'evt1' })),
+    billingEventFindFirst: vi.fn<(args: unknown) => Promise<{ id: string } | null>>(async () => null),
+    storeFindUnique: vi.fn(async () => ({ id: 'store1', shopDomain: 'shop.myshopify.com', plan: 'FREE' })),
+    $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+  }));
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
