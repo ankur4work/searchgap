@@ -58,12 +58,20 @@ export interface ClassificationDecision {
  * Core                                                                *
  * ------------------------------------------------------------------ */
 
-const FUSE_OPTIONS: IFuseOptions<{ id: string; haystack: string; kind: 'title' | 'tag' }> = {
+const FUSE_OPTIONS: IFuseOptions<CorpusEntry> = {
   keys: ['haystack'],
   includeScore: true,
   shouldSort: true,
   ignoreLocation: true,
-  threshold: 1.0, // we apply the cutoff ourselves from engineConfig
+  // Prune inside Fuse at the same cutoff we enforce below. This used to be 1.0
+  // ("we apply the cutoff ourselves"), which means *match everything*: every
+  // search returned and sorted the entire corpus — ~15k entries for a 5k-product
+  // catalog — and the caller then discarded everything above 0.35. Fuse's
+  // threshold is a cutoff on the very same score, so pruning here is behaviour
+  // preserving and removes the sort of a full-corpus result set per query. The
+  // explicit filter in fuzzyMatch is kept so the cutoff still holds if this
+  // option is ever retuned.
+  threshold: engineConfig.fuzzyThreshold,
   isCaseSensitive: false,
   minMatchCharLength: 2,
 };
@@ -168,12 +176,66 @@ export function classify(inputs: ClassifierInputs): ClassificationDecision {
  * Helpers                                                             *
  * ------------------------------------------------------------------ */
 
+interface CorpusEntry {
+  id: string;
+  haystack: string;
+  kind: 'title' | 'tag';
+}
+
+interface CatalogIndex {
+  /** Per-product normalized title + tags, for the exact/substring pass. */
+  normalized: Array<{ product: ProductRef; title: string; tags: string[] }>;
+  /** Fuse index over titles + tags, for the fuzzy pass. */
+  fuse: Fuse<CorpusEntry>;
+}
+
+/**
+ * Catalog index cache, keyed on the products ARRAY IDENTITY.
+ *
+ * Both passes below used to re-derive everything per query: findExactMatch
+ * called normalizeQuery on every title and tag, and fuzzyMatch rebuilt the
+ * entire corpus and constructed a fresh Fuse index. Classification runs one
+ * query at a time against the same catalog, so at the acceptance target of
+ * 10k queries x 5k products that is ~50M normalize calls and 10k full Fuse
+ * builds over ~15k documents — quadratic work that pushed a 30s budget past
+ * 28 MINUTES. Catalog-derived work now happens once per batch.
+ *
+ * WeakMap so a catalog is released as soon as the caller drops the array, and
+ * identity-keyed rather than content-hashed because callers materialize a
+ * fresh array per batch. The one caveat: mutating a products array in place
+ * after first use would serve a stale index — don't do that; build a new array.
+ */
+const catalogCache = new WeakMap<ProductRef[], CatalogIndex>();
+
+function getCatalogIndex(products: ProductRef[]): CatalogIndex {
+  const cached = catalogCache.get(products);
+  if (cached) return cached;
+
+  const normalized = products.map((product) => ({
+    product,
+    title: normalizeQuery(product.title),
+    tags: product.tags.map((t) => normalizeQuery(t)),
+  }));
+
+  const corpus: CorpusEntry[] = [];
+  for (const entry of normalized) {
+    corpus.push({ id: entry.product.id, haystack: entry.title, kind: 'title' });
+    for (const tag of entry.tags) {
+      corpus.push({ id: entry.product.id, haystack: tag, kind: 'tag' });
+    }
+  }
+
+  const index: CatalogIndex = { normalized, fuse: new Fuse(corpus, FUSE_OPTIONS) };
+  catalogCache.set(products, index);
+  return index;
+}
+
 function findExactMatch(qNorm: string, products: ProductRef[]): ProductRef | null {
   if (!qNorm) return null;
-  for (const p of products) {
-    if (normalizeQuery(p.title).includes(qNorm)) return p;
-    for (const tag of p.tags) {
-      if (normalizeQuery(tag) === qNorm) return p;
+  for (const entry of getCatalogIndex(products).normalized) {
+    if (entry.title.includes(qNorm)) return entry.product;
+    for (const tag of entry.tags) {
+      if (tag === qNorm) return entry.product;
     }
   }
   return null;
@@ -188,15 +250,9 @@ interface FuzzyHit {
 
 function fuzzyMatch(qNorm: string, products: ProductRef[]): FuzzyHit | null {
   if (!qNorm) return null;
-  // Build a flat corpus of (productId, haystack) across titles + tags so a
-  // single Fuse query can score against both. Tags get slight weight by
-  // duplicating — but we keep it simple and let Fuse's default score speak.
-  const corpus: Array<{ id: string; haystack: string; kind: 'title' | 'tag' }> = [];
-  for (const p of products) {
-    corpus.push({ id: p.id, haystack: normalizeQuery(p.title), kind: 'title' });
-    for (const t of p.tags) corpus.push({ id: p.id, haystack: normalizeQuery(t), kind: 'tag' });
-  }
-  const fuse = new Fuse(corpus, FUSE_OPTIONS);
+  // Flat corpus of (productId, haystack) across titles + tags so a single Fuse
+  // query scores against both. Built once per catalog — see getCatalogIndex.
+  const { fuse } = getCatalogIndex(products);
 
   const expanded = expandSynonyms(qNorm);
   let best: { score: number; id: string; haystack: string; needle: string } | null = null;
