@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { estimateRevenue } from '@/lib/engine/revenue';
+import { benchmarkFor, defaultAovFor } from '@/lib/engine/benchmarks';
 import type { ClassificationType } from '@prisma/client';
 
 // 20 representative scenarios. Snapshot is literal (not vitest `.toMatchSnapshot`)
 // so that diffs show up explicitly in PRs and nobody is tempted to `-u` the file.
+/** 200 searches × the category-typical FASHION AOV × the FASHION benchmark. */
+const NULL_AOV_ESTIMATE = Math.round(
+  200 * defaultAovFor('FASHION').aovCents * benchmarkFor('FASHION').pct,
+);
+
 const SCENARIOS: Array<{
   name: string;
   input: Parameters<typeof estimateRevenue>[0];
@@ -11,7 +17,7 @@ const SCENARIOS: Array<{
     estimateCents: number;
     bandLowCents: number;
     bandHighCents: number;
-    note?: 'missing_aov' | 'not_classified';
+    note?: 'estimated_aov' | 'not_classified';
   };
 }> = [
   // PRD §10.3 worked example: 200 × $42 × 10% = $840, band $672 – $1008.
@@ -86,9 +92,19 @@ const SCENARIOS: Array<{
     expect: { estimateCents: 0, bandLowCents: 0, bandHighCents: 0, note: 'not_classified' },
   },
   {
-    name: 'null AOV → zero + note missing_aov',
+    // A null AOV no longer zeroes the estimate. The engine falls back to the
+    // category-typical AOV and badges the result `estimated_aov`, so a store
+    // with no order history still sees real magnitudes on day one instead of a
+    // dashboard full of $0. Derived from the benchmark config rather than
+    // hardcoded, so retuning the benchmarks doesn't silently break this test.
+    name: 'null AOV → category fallback + note estimated_aov',
     input: { classificationType: 'TYPE_1', monthlyVolume: 200, aovCents: null, storeCategory: 'FASHION' },
-    expect: { estimateCents: 0, bandLowCents: 0, bandHighCents: 0, note: 'missing_aov' },
+    expect: {
+      estimateCents: NULL_AOV_ESTIMATE,
+      bandLowCents: Math.round(NULL_AOV_ESTIMATE * 0.8),
+      bandHighCents: Math.round(NULL_AOV_ESTIMATE * 1.2),
+      note: 'estimated_aov',
+    },
   },
   {
     name: 'tiny AOV $0.01 → rounds correctly',

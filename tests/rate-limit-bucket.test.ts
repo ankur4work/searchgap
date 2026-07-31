@@ -3,7 +3,12 @@ import type { NextRequest } from 'next/server';
 
 // Mock ioredis to avoid needing a real Redis in CI. The rate limiter uses
 // redis.eval; we hand back a programmable array of responses.
-const evalMock = vi.fn();
+//
+// vi.hoisted is required: vi.mock's factory is hoisted to the top of the file,
+// so a plain `const evalMock = vi.fn()` here would still be in its temporal
+// dead zone when the factory runs, and the whole suite dies with
+// "Cannot access 'evalMock' before initialization".
+const { evalMock } = vi.hoisted(() => ({ evalMock: vi.fn() }));
 vi.mock('ioredis', () => ({
   default: class {
     eval = evalMock;

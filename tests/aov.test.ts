@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock prisma before importing modules that use it.
-const updateMock = vi.fn<[unknown], Promise<unknown>>().mockResolvedValue({});
+//
+// vi.hoisted is required: vi.mock's factory is hoisted to the top of the file,
+// so a plain const here is still in its temporal dead zone when the factory
+// runs. The signature is also written as a single function type — vitest 2
+// dropped the two-type-argument `vi.fn<Args, Return>()` form.
+const { updateMock } = vi.hoisted(() => ({
+  updateMock: vi.fn<(arg: unknown) => Promise<unknown>>().mockResolvedValue({}),
+}));
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     store: {
@@ -13,13 +20,20 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 import { ingestOrders } from '@/lib/ingestion/orders';
+import { encrypt } from '@/lib/crypto';
 import type { Store } from '@prisma/client';
+
+// ingestOrders decrypts store.accessToken before calling Shopify, so the
+// fixture has to hold real ciphertext — a plain 'placeholder' string made every
+// case in this file die with "Malformed ciphertext" before reaching any
+// assertion. Encrypted with the SESSION_SECRET set in tests/setup.ts.
+const ACCESS_TOKEN = encrypt('test-access-token');
 
 function mockStore(): Store {
   return {
     id: 'store_1',
     shopDomain: 'aov.myshopify.com',
-    accessToken: 'placeholder',
+    accessToken: ACCESS_TOKEN,
     scope: '',
     plan: 'FREE',
     aovCents: null,

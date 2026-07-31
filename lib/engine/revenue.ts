@@ -36,7 +36,8 @@ export interface RevenueEstimate {
  *
  * Edge cases:
  *   • classification == NONE (query is fine) → zero estimate, note='not_classified'
- *   • aovCents == null (insufficient data)   → zero estimate, note='missing_aov'
+ *   • aovCents == null (no orders yet)       → category-typical AOV,
+ *     note='estimated_aov' (NOT a zero estimate — see the fallback below)
  *   • monthlyVolume <= 0                     → zero estimate
  *   • benchmark missing for category         → DEFAULT (with warn log inside benchmarkFor)
  */

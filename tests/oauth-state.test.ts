@@ -1,19 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // In-memory mock Redis with SET EX NX + GETDEL semantics for this test.
-const kv = new Map<string, string>();
-const callMock = vi.fn(async (cmd: string, ...args: string[]) => {
-  if (cmd === 'GETDEL') {
-    const [key] = args;
-    const v = kv.get(key ?? '') ?? null;
-    if (v !== null) kv.delete(key ?? '');
-    return v;
-  }
-  throw new Error(`unsupported: ${cmd}`);
-});
-const setMock = vi.fn(async (key: string, value: string) => {
-  kv.set(key, value);
-  return 'OK';
+//
+// Wrapped in vi.hoisted because vi.mock's factory is hoisted above these
+// declarations; as plain consts they are still in their temporal dead zone
+// when the factory runs, and the suite dies with "Cannot access 'callMock'
+// before initialization".
+const { kv, callMock, setMock } = vi.hoisted(() => {
+  const store = new Map<string, string>();
+  return {
+    kv: store,
+    callMock: vi.fn(async (cmd: string, ...args: string[]) => {
+      if (cmd === 'GETDEL') {
+        const [key] = args;
+        const v = store.get(key ?? '') ?? null;
+        if (v !== null) store.delete(key ?? '');
+        return v;
+      }
+      throw new Error(`unsupported: ${cmd}`);
+    }),
+    setMock: vi.fn(async (key: string, value: string) => {
+      store.set(key, value);
+      return 'OK';
+    }),
+  };
 });
 
 vi.mock('ioredis', () => ({
