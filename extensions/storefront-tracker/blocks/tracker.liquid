@@ -1,26 +1,36 @@
 {%- comment -%}
-  SearchGap Storefront Tracker — app embed block.
+  GapFinder Storefront Tracker — app embed block.
 
-  Once a merchant installs SearchGap and enables this embed in their theme
-  editor (Theme → App embeds → toggle "SearchGap Storefront Tracker"), the
+  Once a merchant installs GapFinder and enables this embed in their theme
+  editor (Theme → App embeds → toggle "GapFinder Storefront Tracker"), the
   script below loads on every page and captures every storefront search:
   what shoppers typed, how many results came back, whether they clicked.
 
   No PII is captured — only the query string, result count, and a timestamp.
-  See https://searchgap.solnix.store/methodology for full details.
+  See https://gapfinder.solnix.store/methodology for full details.
+
+  ⚠️ The script src below is hard-coded and CANNOT be derived at render time —
+  an app embed block has no access to the app's own URL. It must always match
+  SHOPIFY_APP_URL / the Coolify FQDN. If they drift, the tracker 503s on every
+  storefront and search capture stops dead with no error surfaced in the app.
+  Re-domaining the app means editing this line AND running `shopify app deploy`
+  — a web redeploy alone will not update it.
+
+  Do NOT rename this file: tracker status detection matches on the block handle
+  (`blocks/tracker/`), which is what keeps detection working across renames.
 {%- endcomment -%}
 
 {% if block.settings.enabled %}
   <script
-    src="https://searchgap.solnix.store/tracker.js"
+    src="https://gapfinder.solnix.store/tracker.js"
     defer
-    data-searchgap="storefront-tracker"
+    data-gapfinder="storefront-tracker"
   ></script>
 {% endif %}
 
 {% schema %}
 {
-  "name": "SearchGap Tracker",
+  "name": "GapFinder Tracker",
   "target": "head",
   "settings": [
     {
@@ -28,7 +38,7 @@
       "id": "enabled",
       "label": "Enable storefront search tracking",
       "default": true,
-      "info": "Captures shopper search queries to surface revenue gaps. Required for SearchGap to work."
+      "info": "Captures shopper search queries to surface revenue gaps. Required for GapFinder to work."
     }
   ]
 }
