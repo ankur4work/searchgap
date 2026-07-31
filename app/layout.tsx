@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Providers } from './providers';
+import { BRAND } from './_components/brand';
 import '@shopify/polaris/build/esm/styles.css';
 import './globals.css';
 
@@ -12,8 +13,8 @@ import './globals.css';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'SearchGap',
-  description: 'Turn Shopify search gaps into revenue.',
+  title: BRAND.name,
+  description: BRAND.tagline,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }): JSX.Element {

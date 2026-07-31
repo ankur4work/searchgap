@@ -5,7 +5,7 @@ import { isAdmin } from '@/lib/admin-guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Admin · SearchGap', robots: { index: false } };
+export const metadata = { title: 'Admin · GapFinder', robots: { index: false } };
 
 export default async function AdminPage(): Promise<JSX.Element> {
   const email = headers().get('x-admin-email');

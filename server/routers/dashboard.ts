@@ -168,7 +168,7 @@ export const dashboardRouter = router({
         const sfRes = await fetch(`https://${store.shopDomain}/`, {
           method: 'GET',
           redirect: 'manual',
-          headers: { 'User-Agent': 'SearchGap-Tracker-Check' },
+          headers: { 'User-Agent': 'GapFinder-Tracker-Check' },
         });
         const loc = sfRes.headers.get('location') ?? '';
         passwordProtected =

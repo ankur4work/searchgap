@@ -33,7 +33,7 @@ export function TrackerSetupBanner({ shopDomain, embedEnabled, passwordProtected
     <Banner tone="info" title="Tracking is live — waiting for your first search">
       <BlockStack gap="200">
         <Text as="p" variant="bodyMd">
-          SearchGap is connected and automatically tracking storefront searches. We haven&rsquo;t
+          GapFinder is connected and automatically tracking storefront searches. We haven&rsquo;t
           captured any yet. Run a search on your storefront (try a term you don&rsquo;t sell) and it
           will appear here within a minute or two.
         </Text>
@@ -42,7 +42,7 @@ export function TrackerSetupBanner({ shopDomain, embedEnabled, passwordProtected
           <Banner tone="warning">
             <Text as="p" variant="bodyMd">
               Your storefront is <strong>password-protected</strong>, so it (and any test search)
-              will ask for a password. This is a Shopify store setting — not SearchGap — and
+              will ask for a password. This is a Shopify store setting — not GapFinder — and
               won&rsquo;t affect live, published stores. To test now, remove the password under{' '}
               <strong>Online Store → Preferences → Password protection</strong>.
             </Text>
@@ -53,7 +53,7 @@ export function TrackerSetupBanner({ shopDomain, embedEnabled, passwordProtected
           <Text as="p" variant="bodySm" tone="subdued">
             Not seeing data after a test search? Some themes strip injected scripts. As a backup you
             can enable the theme app embed: open the theme editor, find <strong>App embeds</strong>{' '}
-            (puzzle-piece icon), toggle <strong>SearchGap Tracker</strong> ON, then{' '}
+            (puzzle-piece icon), toggle <strong>GapFinder Tracker</strong> ON, then{' '}
             <strong>Save</strong>. (The theme editor works without the storefront password.)
           </Text>
         )}

@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "a87b6f168ebe0e5be267e88f8d829789"
-name = "SearchGap"
-application_url = "https://searchgap.solnix.store"
+client_id = "0546f9515e4b670f341c8ffc92e2de06"
+name = "GapFinder"
+application_url = "https://gapfinder.solnix.store"
 embedded = true
 
 [build]
@@ -39,7 +39,7 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://searchgap.solnix.store/api/auth/callback" ]
+redirect_urls = [ "https://gapfinder.solnix.store/api/auth/callback" ]
 
 [pos]
 embedded = false

@@ -17,7 +17,7 @@ const config: CodegenConfig = {
   schema: [
     {
       'https://shopify.dev/admin-graphql-direct-proxy/2025-04': {
-        headers: { 'User-Agent': 'searchgap-codegen' },
+        headers: { 'User-Agent': 'gapfinder-codegen' },
       },
     },
   ],

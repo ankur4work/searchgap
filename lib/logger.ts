@@ -6,7 +6,7 @@ const isDev = env.NODE_ENV !== 'production';
 
 export const logger = pino({
   level: env.LOG_LEVEL,
-  base: { service: 'searchgap', env: env.NODE_ENV },
+  base: { service: 'gapfinder', env: env.NODE_ENV },
   // Attach request_id + shop_domain to every log line if we're inside a
   // request-scoped AsyncLocalStorage frame. Pino mixin runs per-record so no
   // child-logger plumbing is required at call sites.

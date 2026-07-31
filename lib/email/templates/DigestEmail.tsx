@@ -41,12 +41,15 @@ export interface DigestEmailProps {
   plan: 'FREE' | 'GROWTH' | 'PRO';
 }
 
+// Literal hex on purpose: email clients get inlined styles and this template is
+// rendered outside the app bundle, so it can't rely on CSS vars. Keep `accent`
+// in sync with COLOR.primary in app/_components/brand.ts.
 const COLORS = {
   bg: '#F4F6F8',
   card: '#FFFFFF',
   text: '#202223',
   muted: '#6D7175',
-  accent: '#008060',
+  accent: '#4F46E5',
   rule: '#E1E3E5',
 };
 

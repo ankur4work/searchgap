@@ -6,6 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useTrpcAuth } from '@/lib/trpc/provider';
 import { UpgradeModal } from '../_components/UpgradeModal';
 import { analytics } from '../_components/analytics-client';
+import { BRAND, COLOR, RADIUS, SHADOW } from '../_components/brand';
 
 const FREE_FEATURES = [
   { included: true, label: 'Real-time storefront tracker (auto-installs, no code)' },
@@ -67,7 +68,7 @@ export default function PricingPage(): JSX.Element {
               Recover lost revenue. Pay nothing while you decide.
             </Text>
             <Text as="p" tone="subdued">
-              Every Shopify store loses revenue to searches that return nothing. SearchGap finds
+              Every Shopify store loses revenue to searches that return nothing. {BRAND.name} finds
               those moments and tells you exactly what to fix. Start on Free — upgrade only when
               you see real gaps worth recovering.
             </Text>
@@ -86,10 +87,11 @@ export default function PricingPage(): JSX.Element {
             style={{
               flex: '1 1 320px',
               minWidth: 280,
-              border: plan === 'FREE' ? '2px solid #059669' : '1px solid #e1e3e5',
-              borderRadius: 14,
+              border:
+                plan === 'FREE' ? `2px solid ${COLOR.primary}` : `1px solid ${COLOR.border}`,
+              borderRadius: RADIUS.lg,
               padding: '28px 30px',
-              background: '#fff',
+              background: COLOR.surface,
               position: 'relative',
             }}
           >
@@ -99,12 +101,12 @@ export default function PricingPage(): JSX.Element {
                   position: 'absolute',
                   top: -10,
                   left: 16,
-                  background: '#059669',
-                  color: '#fff',
+                  background: COLOR.primary,
+                  color: COLOR.surface,
                   fontSize: 11,
                   fontWeight: 700,
                   padding: '2px 10px',
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   letterSpacing: 0.6,
                 }}
               >
@@ -118,8 +120,10 @@ export default function PricingPage(): JSX.Element {
               Get a feel for your search gaps before paying anything.
             </Text>
             <div style={{ marginTop: 14, marginBottom: 18 }}>
-              <span style={{ fontSize: 40, fontWeight: 800, color: '#1a1a1a' }}>$0</span>
-              <span style={{ fontSize: 14, color: '#6d7175', marginLeft: 6 }}>/ month forever</span>
+              <span style={{ fontSize: 40, fontWeight: 800, color: COLOR.ink }}>$0</span>
+              <span style={{ fontSize: 14, color: COLOR.inkSubtle, marginLeft: 6 }}>
+                / month forever
+              </span>
             </div>
             <ul style={{ padding: 0, listStyle: 'none', marginTop: 8 }}>
               {FREE_FEATURES.map((f) => (
@@ -128,7 +132,7 @@ export default function PricingPage(): JSX.Element {
                   style={{
                     fontSize: 14,
                     padding: '7px 0',
-                    color: f.included ? '#202223' : '#9ba3af',
+                    color: f.included ? COLOR.ink : COLOR.inkDisabled,
                     display: 'flex',
                     gap: 10,
                     lineHeight: 1.4,
@@ -136,7 +140,7 @@ export default function PricingPage(): JSX.Element {
                 >
                   <span
                     style={{
-                      color: f.included ? '#16a34a' : '#9ba3af',
+                      color: f.included ? COLOR.success : COLOR.inkDisabled,
                       fontWeight: 700,
                       flexShrink: 0,
                     }}
@@ -154,14 +158,19 @@ export default function PricingPage(): JSX.Element {
             style={{
               flex: '1 1 320px',
               minWidth: 280,
-              border: plan === 'GROWTH' ? '2px solid #16a34a' : '2px solid #0d9488',
-              borderRadius: 14,
+              border:
+                plan === 'GROWTH'
+                  ? `2px solid ${COLOR.success}`
+                  : `2px solid ${COLOR.primary}`,
+              borderRadius: RADIUS.lg,
               padding: '28px 30px',
               background:
-                plan === 'GROWTH' ? '#fff' : 'linear-gradient(180deg, #ecfdf5 0%, #fff 60%)',
+                plan === 'GROWTH'
+                  ? COLOR.surface
+                  : `linear-gradient(180deg, ${COLOR.tint50} 0%, ${COLOR.surface} 60%)`,
               position: 'relative',
               boxShadow:
-                plan === 'GROWTH' ? 'none' : '0 8px 24px rgba(13,148,136,0.14)',
+                plan === 'GROWTH' ? 'none' : SHADOW.md,
             }}
           >
             <div
@@ -169,12 +178,12 @@ export default function PricingPage(): JSX.Element {
                 position: 'absolute',
                 top: -10,
                 left: 16,
-                background: plan === 'GROWTH' ? '#16a34a' : '#0d9488',
-                color: '#fff',
+                background: plan === 'GROWTH' ? COLOR.success : COLOR.primary,
+                color: COLOR.surface,
                 fontSize: 11,
                 fontWeight: 700,
                 padding: '2px 10px',
-                borderRadius: 999,
+                borderRadius: RADIUS.pill,
                 letterSpacing: 0.6,
               }}
             >
@@ -187,16 +196,16 @@ export default function PricingPage(): JSX.Element {
               For merchants ready to act on every gap and recover the revenue.
             </Text>
             <div style={{ marginTop: 14, marginBottom: 18 }}>
-              <span style={{ fontSize: 40, fontWeight: 800, color: '#1a1a1a' }}>$9</span>
-              <span style={{ fontSize: 14, color: '#6d7175', marginLeft: 6 }}>/ month</span>
+              <span style={{ fontSize: 40, fontWeight: 800, color: COLOR.ink }}>$9</span>
+              <span style={{ fontSize: 14, color: COLOR.inkSubtle, marginLeft: 6 }}>/ month</span>
               <span
                 style={{
                   marginLeft: 12,
                   fontSize: 11,
-                  background: '#dcfce7',
-                  color: '#166534',
+                  background: COLOR.successBg,
+                  color: COLOR.successFg,
                   padding: '2px 8px',
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   fontWeight: 700,
                 }}
               >
@@ -210,7 +219,7 @@ export default function PricingPage(): JSX.Element {
                   style={{
                     fontSize: 14,
                     padding: '7px 0',
-                    color: i === 0 ? '#6d7175' : '#202223',
+                    color: i === 0 ? COLOR.inkSubtle : COLOR.ink,
                     fontStyle: i === 0 ? 'italic' : 'normal',
                     display: 'flex',
                     gap: 10,
@@ -218,7 +227,7 @@ export default function PricingPage(): JSX.Element {
                   }}
                 >
                   {i > 0 && (
-                    <span style={{ color: '#16a34a', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                    <span style={{ color: COLOR.success, fontWeight: 700, flexShrink: 0 }}>✓</span>
                   )}
                   <span style={i === 0 ? { paddingLeft: 0 } : undefined}>{f}</span>
                 </li>
@@ -229,7 +238,7 @@ export default function PricingPage(): JSX.Element {
                 <Button variant="primary" size="large" onClick={openUpgrade} fullWidth>
                   Start Growth · $9/mo
                 </Button>
-                <div style={{ fontSize: 11, color: '#6d7175', marginTop: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: COLOR.inkSubtle, marginTop: 10, textAlign: 'center' }}>
                   Cancel anytime · Billed through Shopify · No credit card extra
                 </div>
               </div>

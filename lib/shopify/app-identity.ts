@@ -14,10 +14,10 @@
  */
 
 /** Matches `client_id` in shopify.app.toml. Public identifier — safe to commit. */
-export const APP_CLIENT_ID = 'a87b6f168ebe0e5be267e88f8d829789';
+export const APP_CLIENT_ID = '0546f9515e4b670f341c8ffc92e2de06';
 
 /** Host portion of `application_url` in shopify.app.toml (no scheme, no path). */
-export const APP_HOST = 'searchgap.solnix.store';
+export const APP_HOST = 'gapfinder.solnix.store';
 
 /** Matches `access_scopes.scopes` in shopify.app.toml. Order-insensitive. */
 export const APP_SCOPES = 'read_orders,read_products,read_content,read_themes,write_script_tags';

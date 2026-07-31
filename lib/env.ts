@@ -32,9 +32,9 @@ const EnvSchema = z.object({
   SMTP_PORT: z.coerce.number().int().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  FROM_EMAIL: z.string().email().default('no-reply@searchgap.solnix.store'),
-  SUPPORT_EMAIL: z.string().email().default('support@searchgap.solnix.store'),
-  COMPANY_ADDRESS: z.string().default('SearchGap · Bangalore, India'),
+  FROM_EMAIL: z.string().email().default('no-reply@gapfinder.solnix.store'),
+  SUPPORT_EMAIL: z.string().email().default('support@gapfinder.solnix.store'),
+  COMPANY_ADDRESS: z.string().default('GapFinder · Bangalore, India'),
 
   // Analytics (optional self-hosted PostHog).
   POSTHOG_KEY: z.string().optional(),
@@ -58,7 +58,7 @@ const EnvSchema = z.object({
   // Shared secret required (in production) on admin/ops routes in addition to
   // the admin email — so a known email alone can't reach /admin or reingest.
   ADMIN_BEARER: z.string().default(''),
-  PRIVACY_CONTACT_EMAIL: z.string().email().default('privacy@searchgap.solnix.store'),
+  PRIVACY_CONTACT_EMAIL: z.string().email().default('privacy@gapfinder.solnix.store'),
   DPA_URL: z.string().url().optional(),
 
   // Rate limits (Redis token bucket). Tune per environment.

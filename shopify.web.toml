@@ -1,4 +1,4 @@
-name = "searchgap-web"
+name = "gapfinder-web"
 roles = ["frontend", "backend"]
 webhooks_path = "/webhooks"
 

@@ -84,7 +84,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
       <h1 style={{ fontSize: 22, margin: '0 0 16px 0' }}>{title}</h1>
       <div style={{ fontSize: 15, lineHeight: 1.5 }}>{children}</div>
       <p style={{ marginTop: 32, fontSize: 12, color: '#6D7175' }}>
-        SearchGap &middot;{' '}
+        GapFinder &middot;{' '}
         <a href="/methodology" style={{ color: '#6D7175' }}>
           How we compute this
         </a>

@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react';
 import { env } from '@/lib/env';
-import { SearchGapLogo } from '../_components/SearchGapLogo';
+import { BrandLockup } from '../_components/GapFinderLogo';
+import { BRAND, COLOR, HERO_GRADIENT, RADIUS, SHADOW } from '../_components/brand';
 
 export const metadata = {
-  title: 'Privacy Policy · SearchGap',
-  description: 'What SearchGap collects, why, and how long we keep it.',
+  title: `Privacy Policy · ${BRAND.name}`,
+  description: `What ${BRAND.name} collects, why, and how long we keep it.`,
   robots: { index: true, follow: true },
 };
 
@@ -23,18 +24,18 @@ const STORED: Array<[string, string, string]> = [
 const sectionTitle: CSSProperties = {
   fontSize: 18,
   fontWeight: 700,
-  color: '#047857',
+  color: COLOR.primaryDeep,
   margin: '32px 0 10px',
 };
-const para: CSSProperties = { margin: '0 0 12px', color: '#3a3f44' };
-const li: CSSProperties = { margin: '0 0 8px', color: '#3a3f44' };
+const para: CSSProperties = { margin: '0 0 12px', color: '#3a3f44', maxWidth: '68ch' };
+const li: CSSProperties = { margin: '0 0 8px', color: '#3a3f44', maxWidth: '68ch' };
 
 export default function PrivacyPage(): JSX.Element {
   return (
     <main
       style={{
         minHeight: '100vh',
-        background: '#f6f8fa',
+        background: COLOR.canvas,
         fontFamily:
           'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
         padding: '40px 16px',
@@ -44,27 +45,24 @@ export default function PrivacyPage(): JSX.Element {
         style={{
           maxWidth: 760,
           margin: '0 auto',
-          background: '#fff',
-          borderRadius: 16,
+          background: COLOR.surface,
+          borderRadius: RADIUS.xl,
           overflow: 'hidden',
-          boxShadow: '0 4px 24px rgba(2,44,34,0.10)',
-          color: '#202223',
+          boxShadow: SHADOW.md,
+          color: COLOR.ink,
           lineHeight: 1.6,
         }}
       >
         {/* header band */}
         <header
           style={{
-            background: 'radial-gradient(120% 140% at 0% 0%, #059669 0%, #047857 40%, #022c22 100%)',
-            color: '#fff',
+            background: HERO_GRADIENT,
+            color: COLOR.surface,
             padding: '28px 36px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
-            <SearchGapLogo size={26} />
-            <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>
-              Search<span style={{ color: '#a3e635' }}>Gap</span>
-            </span>
+          <div style={{ marginBottom: 14 }}>
+            <BrandLockup size={26} fontSize={16} tone="onDark" />
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: -0.4 }}>
             Privacy Policy
@@ -74,7 +72,7 @@ export default function PrivacyPage(): JSX.Element {
 
         <div style={{ padding: '8px 36px 40px' }}>
           <p style={{ ...para, marginTop: 20 }}>
-            SearchGap analyses the searches shoppers type into your storefront and shows you the
+            {BRAND.name} analyses the searches shoppers type into your storefront and shows you the
             product gaps and revenue they represent. We are built around data minimisation: we store
             the minimum needed to do that, and never any data that identifies a shopper.
           </p>
@@ -90,8 +88,8 @@ export default function PrivacyPage(): JSX.Element {
                       style={{
                         textAlign: 'left',
                         padding: '10px 12px',
-                        borderBottom: '2px solid #d1fae5',
-                        color: '#047857',
+                        borderBottom: `2px solid ${COLOR.tint200}`,
+                        color: COLOR.primaryDeep,
                         fontWeight: 700,
                         whiteSpace: 'nowrap',
                       }}
@@ -104,13 +102,13 @@ export default function PrivacyPage(): JSX.Element {
               <tbody>
                 {STORED.map(([d, p, r]) => (
                   <tr key={d}>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #eef1f3', fontWeight: 600 }}>
+                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${COLOR.borderSubtle}`, fontWeight: 600 }}>
                       {d}
                     </td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #eef1f3', color: '#5a6168' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${COLOR.borderSubtle}`, color: COLOR.inkMuted }}>
                       {p}
                     </td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #eef1f3', color: '#5a6168' }}>
+                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${COLOR.borderSubtle}`, color: COLOR.inkMuted }}>
                       {r}
                     </td>
                   </tr>
@@ -191,7 +189,7 @@ export default function PrivacyPage(): JSX.Element {
 
           <h2 style={sectionTitle}>Contact</h2>
           <p style={para}>
-            Email <a href={`mailto:${env.PRIVACY_CONTACT_EMAIL}`} style={{ color: '#047857' }}>
+            Email <a href={`mailto:${env.PRIVACY_CONTACT_EMAIL}`} style={{ color: COLOR.primaryDeep }}>
               {env.PRIVACY_CONTACT_EMAIL}
             </a>{' '}
             for any privacy request. We respond within 30 days.

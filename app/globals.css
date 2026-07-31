@@ -7,3 +7,97 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* ── GapFinder brand tokens ────────────────────────────────────────────────
+   Mirrors app/_components/brand.ts. TS holds the values consumed by inline
+   styles; these vars back the interactive classes below, which need real
+   CSS pseudo-classes (:hover / :focus-visible) that inline styles can't do. */
+:root {
+  --gf-primary: #4f46e5;
+  --gf-primary-deep: #4338ca;
+  --gf-primary-ink: #312e81;
+  --gf-accent: #22d3ee;
+  --gf-tint-50: #eef2ff;
+  --gf-border: #e1e3e5;
+  --gf-surface: #ffffff;
+  --gf-ink: #202223;
+  --gf-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px var(--gf-primary);
+}
+
+/* Every custom (non-Polaris) interactive element gets a visible focus ring.
+   Polaris components ship their own, so this is scoped to .gf-* only. */
+.gf-btn,
+.gf-card-btn {
+  transition:
+    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gf-btn:focus-visible,
+.gf-card-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--gf-focus-ring);
+}
+
+/* Primary CTA sitting on the dark hero band: white fill, indigo label. */
+.gf-btn--onHero:hover {
+  background-color: var(--gf-tint-50);
+  transform: translateY(-1px);
+}
+.gf-btn--onHero:active {
+  transform: translateY(0);
+}
+
+/* Secondary CTA on the hero: translucent, brightens on hover. */
+.gf-btn--ghostHero:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.gf-btn--ghostHero:active {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+.gf-btn--ghostHero:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--gf-primary-ink), 0 0 0 4px var(--gf-accent);
+}
+
+/* Quick-nav cards — lift + brand border on hover so they read as clickable. */
+.gf-card-btn:hover {
+  border-color: var(--gf-primary);
+  box-shadow: 0 2px 4px rgba(30, 27, 75, 0.06), 0 8px 20px rgba(30, 27, 75, 0.1);
+  transform: translateY(-2px);
+}
+.gf-card-btn:active {
+  transform: translateY(0);
+}
+
+/* The hero "LIVE" dot. Decorative — meaning is carried by the adjacent label. */
+.gf-live-dot {
+  animation: gf-pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes gf-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gf-btn,
+  .gf-card-btn,
+  .gf-live-dot {
+    transition-duration: 0.01ms;
+    animation: none;
+  }
+  .gf-btn:hover,
+  .gf-card-btn:hover {
+    transform: none;
+  }
+}

@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useState, useRef, useEffect } from 'react';
 import type { Plan } from '@prisma/client';
 import { trpc } from '@/lib/trpc/client';
+import { BRAND, COLOR, RADIUS, SHADOW } from './brand';
 
 interface StatCardProps {
   label: string;
@@ -19,22 +20,22 @@ function StatCard({ label, value, hint, accent }: StatCardProps): JSX.Element {
       style={{
         flex: '1 1 220px',
         minWidth: 220,
-        background: '#fff',
-        border: '1px solid #e1e3e5',
+        background: COLOR.surface,
+        border: `1px solid ${COLOR.border}`,
         borderLeft: `4px solid ${accent}`,
-        borderRadius: 12,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.sm,
         padding: '20px 24px',
-        boxShadow: '0 1px 0 rgba(0,0,0,0.04)',
       }}
     >
-      <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.6, color: '#6d7175' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.6, color: COLOR.inkSubtle }}>
         {label.toUpperCase()}
       </div>
       <div style={{ fontSize: 30, fontWeight: 700, color: accent, marginTop: 6, lineHeight: 1.2 }}>
         {value}
       </div>
       {hint && (
-        <div style={{ fontSize: 14, color: '#6d7175', marginTop: 6 }}>
+        <div style={{ fontSize: 14, color: COLOR.inkSubtle, marginTop: 6 }}>
           {hint}
         </div>
       )}
@@ -127,8 +128,8 @@ function SyncProgressPanel({
                 : effectiveStatus === 'FAILED'
                   ? '#dc2626'
                   : effectiveStatus === 'RUNNING'
-                    ? '#059669'
-                    : '#6d7175';
+                    ? COLOR.primary
+                    : COLOR.inkSubtle;
 
             return (
               <div key={job.jobType}>
@@ -272,10 +273,10 @@ export function DashboardOverview({
     PRO: 'attention',
   };
 
-  const statusAccent = syncReady ? '#16a34a' : '#d97706';
-  const planAccent = '#059669';
-  const queriesAccent = '#14b8a6';
-  const revenueAccent = revenueImpactCents > 0 ? '#dc2626' : '#6d7175';
+  const statusAccent = syncReady ? COLOR.success : '#d97706';
+  const planAccent = COLOR.primary;
+  const queriesAccent = COLOR.accentStrong;
+  const revenueAccent = revenueImpactCents > 0 ? COLOR.criticalFg : COLOR.inkSubtle;
 
   return (
     <BlockStack gap="500">
@@ -287,21 +288,21 @@ export function DashboardOverview({
               style={{
                 width: 56,
                 height: 56,
-                borderRadius: 12,
-                background: 'linear-gradient(135deg, #10b981, #14b8a6)',
+                borderRadius: RADIUS.lg,
+                background: `linear-gradient(135deg, ${COLOR.primary}, ${COLOR.primaryInk})`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: COLOR.surface,
                 fontSize: 24,
                 fontWeight: 700,
               }}
             >
-              DR
+              GF
             </div>
             <BlockStack gap="050">
               <Text as="h1" variant="headingXl">
-                SearchGap Dashboard
+                {BRAND.name} Dashboard
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
                 Recover revenue from failed shopper searches on {storeName}
@@ -386,7 +387,7 @@ export function DashboardOverview({
                 href="/pricing"
                 style={{
                   textDecoration: 'none',
-                  color: '#059669',
+                  color: COLOR.primary,
                   fontWeight: 600,
                   fontSize: 14,
                   whiteSpace: 'nowrap',

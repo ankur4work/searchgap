@@ -1,9 +1,10 @@
 import { env } from '@/lib/env';
+import { BRAND, COLOR, RADIUS, SHADOW } from '../_components/brand';
 
 export const metadata = {
-  title: 'Methodology · SearchGap',
+  title: `Methodology · ${BRAND.name}`,
   description:
-    'How SearchGap classifies failed Shopify storefront searches and estimates the revenue impact for each gap.',
+    `How ${BRAND.name} classifies failed Shopify storefront searches and estimates the revenue impact for each gap.`,
   robots: { index: true, follow: true },
   alternates: { canonical: `${process.env.SHOPIFY_APP_URL ?? ''}/methodology` },
 };
@@ -19,12 +20,12 @@ const PAGE_STYLE: React.CSSProperties = {
 };
 
 const HERO_STYLE: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
-  color: '#fff',
-  borderRadius: 16,
+  background: `linear-gradient(135deg, ${COLOR.primary} 0%, ${COLOR.primaryInk} 100%)`,
+  color: COLOR.surface,
+  borderRadius: RADIUS.xl,
   padding: '36px 40px',
   marginBottom: 32,
-  boxShadow: '0 8px 24px rgba(5, 150, 105, 0.18)',
+  boxShadow: SHADOW.hero,
 };
 
 const CARD_STYLE: React.CSSProperties = {
@@ -148,10 +149,10 @@ export default function MethodologyPage(): JSX.Element {
           METHODOLOGY
         </div>
         <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0, marginBottom: 10, lineHeight: 1.15 }}>
-          How SearchGap classifies gaps and estimates revenue.
+          How {BRAND.name} classifies gaps and estimates revenue.
         </h1>
         <p style={{ fontSize: 16, opacity: 0.94, margin: 0, maxWidth: 640 }}>
-          Every shopper search on your storefront tells you something. SearchGap listens, sorts
+          Every shopper search on your storefront tells you something. {BRAND.name} listens, sorts
           each search into a clear category, and turns the failed ones into a ranked list of
           revenue you can recover. This page explains exactly how.
         </p>
@@ -176,7 +177,7 @@ export default function MethodologyPage(): JSX.Element {
           <li>
             <strong>Storefront search events</strong> — the query text a shopper typed, how many
             results came back, and whether they clicked one. Captured by a small storefront
-            tracker installed automatically when you add SearchGap.
+            tracker installed automatically when you add {BRAND.name}.
           </li>
         </ul>
         <p style={PARA_STYLE}>

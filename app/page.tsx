@@ -7,14 +7,15 @@ import { trpc } from '@/lib/trpc/client';
 import { useTrpcAuth } from '@/lib/trpc/provider';
 import { TrackerSetupBanner } from './_components/TrackerSetupBanner';
 import { UpgradeModal } from './_components/UpgradeModal';
-import { SearchGapLogo } from './_components/SearchGapLogo';
+import { BrandLockup } from './_components/GapFinderLogo';
+import { BRAND, COLOR, HERO_GRADIENT, RADIUS, SHADOW } from './_components/brand';
 import { analytics } from './_components/analytics-client';
 
 // Illustrative gap rows for the hero preview (shown before real data exists).
 const PREVIEW_GAPS = [
-  { q: 'waterproof jacket', type: 'Missing', meta: '42 searches · 0 results', val: 1240, fg: '#dc2626', bg: '#fee2e2' },
-  { q: 'trail running shoes 12', type: 'Wrong match', meta: '28 searches · low CTR', val: 680, fg: '#b45309', bg: '#fef3c7' },
-  { q: 'merino base layer', type: 'Low interest', meta: '19 searches', val: 310, fg: '#475569', bg: '#e2e8f0' },
+  { q: 'waterproof jacket', type: 'Missing', meta: '42 searches · 0 results', val: 1240, fg: COLOR.criticalFg, bg: COLOR.criticalBg },
+  { q: 'trail running shoes 12', type: 'Wrong match', meta: '28 searches · low CTR', val: 680, fg: COLOR.warningFg, bg: COLOR.warningBg },
+  { q: 'merino base layer', type: 'Low interest', meta: '19 searches', val: 310, fg: COLOR.neutralFg, bg: COLOR.neutralBg },
 ] as const;
 
 const STEPS = [
@@ -84,7 +85,7 @@ const BEST_PRACTICES = [
     body: (
       <>
         New collections, seasonal launches, or even renaming products can create fresh search gaps
-        overnight. Make a habit of opening SearchGap within 48 hours of any catalog shift — that&rsquo;s
+        overnight. Make a habit of opening {BRAND.name} within 48 hours of any catalog shift — that&rsquo;s
         when the highest-impact gaps surface and the easiest wins are still on the table.
       </>
     ),
@@ -152,12 +153,11 @@ export default function HomePage(): JSX.Element {
           style={{
             position: 'relative',
             overflow: 'hidden',
-            background:
-              'radial-gradient(120% 140% at 0% 0%, #059669 0%, #047857 35%, #022c22 100%)',
-            borderRadius: 18,
-            padding: '34px 40px',
-            color: '#fff',
-            boxShadow: '0 10px 30px rgba(5,150,105,0.28)',
+            background: HERO_GRADIENT,
+            borderRadius: RADIUS.xl,
+            padding: 'clamp(24px, 4vw, 34px) clamp(20px, 5vw, 40px)',
+            color: COLOR.surface,
+            boxShadow: SHADOW.hero,
           }}
         >
           <div
@@ -169,7 +169,7 @@ export default function HomePage(): JSX.Element {
               width: 300,
               height: 300,
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(163,230,53,0.40) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(34,211,238,0.38) 0%, transparent 70%)',
               filter: 'blur(20px)',
               pointerEvents: 'none',
             }}
@@ -186,11 +186,8 @@ export default function HomePage(): JSX.Element {
             {/* LEFT */}
             <div style={{ flex: '1 1 460px', minWidth: 280 }}>
               {/* brand lockup */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16 }}>
-                <SearchGapLogo size={30} />
-                <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3 }}>
-                  Search<span style={{ color: '#a3e635' }}>Gap</span>
-                </span>
+              <div style={{ marginBottom: 16 }}>
+                <BrandLockup size={30} fontSize={19} tone="onDark" />
               </div>
               <div
                 style={{
@@ -201,18 +198,23 @@ export default function HomePage(): JSX.Element {
                   fontWeight: 600,
                   letterSpacing: 0.8,
                   padding: '4px 10px',
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   background: 'rgba(255,255,255,0.14)',
                   border: '1px solid rgba(255,255,255,0.18)',
                   marginBottom: 14,
                 }}
               >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#a3e635' }} />
+                <span
+                  className="gf-live-dot"
+                  style={{ width: 6, height: 6, borderRadius: '50%', background: COLOR.accent }}
+                />
                 LIVE · capturing every search
               </div>
               <h1
                 style={{
-                  fontSize: 33,
+                  // clamp keeps the headline from crowding the preview card at
+                  // the ~460px flex-basis breakpoint on narrow admin frames.
+                  fontSize: 'clamp(26px, 3.4vw, 33px)',
                   lineHeight: 1.1,
                   fontWeight: 800,
                   margin: 0,
@@ -221,40 +223,52 @@ export default function HomePage(): JSX.Element {
                 }}
               >
                 Find the searches that{' '}
-                <span style={{ color: '#fbbf24' }}>cost you sales.</span>
+                <span style={{ color: COLOR.accent }}>cost you sales.</span>
               </h1>
-              <p style={{ fontSize: 16, lineHeight: 1.5, margin: 0, opacity: 0.92, maxWidth: 580 }}>
+              <p
+                style={{
+                  fontSize: 16,
+                  lineHeight: 1.5,
+                  margin: 0,
+                  opacity: 0.92,
+                  // ~65ch measure — the old 580px ran long on wide screens.
+                  maxWidth: '62ch',
+                }}
+              >
                 Every &ldquo;0 results&rdquo; on your storefront is a buyer with intent who walked
-                away. SearchGap surfaces every missed query, ranks them by revenue impact, and tells
-                you exactly what to fix — usually within minutes of install.
+                away. {BRAND.name} surfaces every missed query, ranks them by revenue impact, and
+                tells you exactly what to fix — usually within minutes of install.
               </p>
               <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 <button
+                  className="gf-btn gf-btn--onHero"
                   onClick={() => navigate('/dashboard')}
                   style={{
-                    background: '#fff',
-                    color: '#059669',
+                    background: COLOR.surface,
+                    color: COLOR.primaryDeep,
                     fontSize: 14,
                     fontWeight: 700,
-                    padding: '10px 18px',
-                    borderRadius: 10,
+                    // 44px min touch target.
+                    padding: '12px 18px',
+                    borderRadius: RADIUS.md,
                     border: 'none',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                    boxShadow: SHADOW.md,
                   }}
                 >
                   Open dashboard →
                 </button>
                 {plan === 'FREE' && (
                   <button
+                    className="gf-btn gf-btn--ghostHero"
                     onClick={openUpgrade}
                     style={{
                       background: 'rgba(255,255,255,0.12)',
-                      color: '#fff',
+                      color: COLOR.surface,
                       fontSize: 14,
                       fontWeight: 600,
-                      padding: '10px 18px',
-                      borderRadius: 10,
+                      padding: '12px 18px',
+                      borderRadius: RADIUS.md,
                       border: '1px solid rgba(255,255,255,0.25)',
                       cursor: 'pointer',
                     }}
@@ -284,11 +298,11 @@ export default function HomePage(): JSX.Element {
             <div style={{ flex: '0 1 380px', minWidth: 300 }}>
               <div
                 style={{
-                  background: '#fff',
-                  borderRadius: 14,
+                  background: COLOR.surface,
+                  borderRadius: RADIUS.lg,
                   padding: 16,
-                  boxShadow: '0 12px 28px rgba(2,44,34,0.28)',
-                  color: '#202223',
+                  boxShadow: SHADOW.lg,
+                  color: COLOR.ink,
                 }}
               >
                 <div
@@ -300,7 +314,7 @@ export default function HomePage(): JSX.Element {
                   }}
                 >
                   <span style={{ fontSize: 13, fontWeight: 700 }}>Top revenue gaps</span>
-                  <span style={{ fontSize: 11, color: '#6d7175' }}>last 30 days</span>
+                  <span style={{ fontSize: 11, color: COLOR.inkSubtle }}>last 30 days</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {PREVIEW_GAPS.map((g, i) => (
@@ -311,8 +325,8 @@ export default function HomePage(): JSX.Element {
                         alignItems: 'center',
                         gap: 10,
                         padding: '9px 10px',
-                        borderRadius: 10,
-                        background: '#f6f8fa',
+                        borderRadius: RADIUS.md,
+                        background: COLOR.canvas,
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -333,19 +347,19 @@ export default function HomePage(): JSX.Element {
                               fontSize: 10.5,
                               fontWeight: 700,
                               padding: '1px 7px',
-                              borderRadius: 999,
+                              borderRadius: RADIUS.pill,
                               color: g.fg,
                               background: g.bg,
                             }}
                           >
                             {g.type}
                           </span>
-                          <span style={{ fontSize: 11, color: '#6d7175' }}>{g.meta}</span>
+                          <span style={{ fontSize: 11, color: COLOR.inkSubtle }}>{g.meta}</span>
                         </div>
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#047857' }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: COLOR.primaryDeep }}>
                         <CountUp end={g.val} prefix="$" separator="," duration={1.6} delay={i * 0.15} />
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#6d7175' }}>/mo</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: COLOR.inkSubtle }}>/mo</span>
                       </div>
                     </div>
                   ))}
@@ -354,9 +368,9 @@ export default function HomePage(): JSX.Element {
                   style={{
                     marginTop: 12,
                     paddingTop: 10,
-                    borderTop: '1px solid #e1e3e5',
+                    borderTop: `1px solid ${COLOR.border}`,
                     fontSize: 11.5,
-                    color: '#6d7175',
+                    color: COLOR.inkSubtle,
                     textAlign: 'center',
                   }}
                 >
@@ -383,11 +397,11 @@ export default function HomePage(): JSX.Element {
           />
         )}
 
-        {/* ───────────── HOW SEARCHGAP WORKS — icon stepper ───────────── */}
+        {/* ───────────── HOW GAPFINDER WORKS — icon stepper ───────────── */}
         <Card>
           <BlockStack gap="400">
             <Text as="h2" variant="headingMd">
-              How SearchGap works
+              How {BRAND.name} works
             </Text>
             <div
               style={{
@@ -414,9 +428,9 @@ export default function HomePage(): JSX.Element {
                     style={{
                       width: 52,
                       height: 52,
-                      borderRadius: 16,
-                      background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
-                      border: '1px solid #a7f3d0',
+                      borderRadius: RADIUS.lg,
+                      background: `linear-gradient(135deg, ${COLOR.tint50}, ${COLOR.tint100})`,
+                      border: `1px solid ${COLOR.tint200}`,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -426,11 +440,11 @@ export default function HomePage(): JSX.Element {
                   >
                     {step.icon}
                   </div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', marginBottom: 2 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: COLOR.primary, marginBottom: 2 }}>
                     STEP {i + 1}
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{step.title}</div>
-                  <div style={{ fontSize: 12.5, color: '#5a6168', lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 12.5, color: COLOR.inkMuted, lineHeight: 1.45 }}>
                     {step.subtitle}
                   </div>
                 </div>
@@ -463,9 +477,9 @@ export default function HomePage(): JSX.Element {
                           flex: '0 0 auto',
                           width: 38,
                           height: 38,
-                          borderRadius: 10,
-                          background: '#ecfdf5',
-                          border: '1px solid #a7f3d0',
+                          borderRadius: RADIUS.md,
+                          background: COLOR.tint50,
+                          border: `1px solid ${COLOR.tint200}`,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -505,8 +519,8 @@ export default function HomePage(): JSX.Element {
                           width: 22,
                           height: 22,
                           borderRadius: '50%',
-                          background: '#059669',
-                          color: '#fff',
+                          background: COLOR.primary,
+                          color: COLOR.surface,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -538,16 +552,17 @@ export default function HomePage(): JSX.Element {
           {QUICK_NAV.map(({ path, icon, title, desc }) => (
             <button
               key={path}
+              className="gf-card-btn"
               onClick={() => navigate(path)}
               style={{
                 flex: '1 1 280px',
                 minWidth: 260,
-                background: '#fff',
-                border: '1px solid #e1e3e5',
-                borderRadius: 12,
+                background: COLOR.surface,
+                border: `1px solid ${COLOR.border}`,
+                borderRadius: RADIUS.lg,
                 padding: '20px 24px',
                 cursor: 'pointer',
-                color: '#202223',
+                color: COLOR.ink,
                 textAlign: 'left',
               }}
             >
