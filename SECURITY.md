@@ -2,7 +2,7 @@
 
 ## Scope
 
-SearchGap is an embedded Shopify app. It holds:
+GapFinder is an embedded Shopify app. It holds:
 
 1. **Merchant-scoped offline access tokens** (the only true secret).
 2. **Search query strings and counts** — business-sensitive but not PII.

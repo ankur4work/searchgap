@@ -1,4 +1,4 @@
-# Shopify App Store listing copy — SearchGap (June 2026 submission)
+# Shopify App Store listing copy — GapFinder (June 2026 submission)
 
 Copy verified against form limits and current app behavior (two plans: Free /
 Growth $9, no trial — billed on approval, cancel anytime; read-only scopes; no
@@ -6,7 +6,7 @@ synonym write-back — keyword fixes are suggestions, not one-click sync).
 
 ## App name (30 max — 11 used)
 
-SearchGap
+GapFinder
 
 ## Primary category
 
@@ -23,7 +23,7 @@ See which store searches fail and what they cost you. Get ranked product gaps wi
 
 ## App details (500 max — 497 used)
 
-Shoppers leave when search returns nothing. SearchGap tracks searches on your storefront, finds the ones that failed, and explains why: the product is missing, the right product exists but does not match the words shoppers use, or results appeared but drew no interest. Each gap is ranked by estimated revenue based on your own order history. Keyword gaps include fix suggestions matched to your catalog, and a weekly email digest summarizes new gaps so you stay informed without opening the app.
+Shoppers leave when search returns nothing. GapFinder tracks searches on your storefront, finds the ones that failed, and explains why: the product is missing, the right product exists but does not match the words shoppers use, or results appeared but drew no interest. Each gap is ranked by estimated revenue based on your own order history. Keyword gaps include fix suggestions matched to your catalog, and a weekly email digest summarizes new gaps so you stay informed without opening the app.
 
 ## Features (80 max each)
 
@@ -58,7 +58,7 @@ brand green #008060, flat, readable at 32×32.
 
 ## Support
 
-- Email: support@searchgap.solnix.store
+- Email: support@gapfinder.solnix.store
 - In-app support link in the NavMenu
 
 ## DO NOT reuse from the old Search Failure Miner listing (review violations)

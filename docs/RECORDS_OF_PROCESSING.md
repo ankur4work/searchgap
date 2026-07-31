@@ -7,7 +7,7 @@ _Last reviewed: 2026-04-22._
 
 | | |
 |---|---|
-| Name | SearchGap (trading entity: see legal entity record) |
+| Name | GapFinder (trading entity: see legal entity record) |
 | Primary address | See `COMPANY_ADDRESS` env var |
 | Privacy officer | see `PRIVACY_CONTACT_EMAIL` |
 

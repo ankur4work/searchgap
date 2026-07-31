@@ -1,4 +1,4 @@
-# SearchGap
+# GapFinder
 
 A Shopify App Store product that turns failed-search signals into revenue: identifies product gaps, applies keyword fixes via Shopify Search & Discovery, and surfaces a weekly revenue-impact digest.
 

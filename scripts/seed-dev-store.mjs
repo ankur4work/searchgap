@@ -343,7 +343,7 @@ async function main() {
   const variants = await fetchVariants();
   await createOrders(N_ORDERS, variants);
 
-  console.log('\n🎉 Done! Install SearchGap on this store and trigger a sync.');
+  console.log('\n🎉 Done! Install GapFinder on this store and trigger a sync.');
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

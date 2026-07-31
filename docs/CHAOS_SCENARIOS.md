@@ -65,7 +65,7 @@ with `429 Too Many Requests` for 5 minutes, then 200.
 **Tool**: OWASP ZAP baseline scan:
 ```
 docker run -t owasp/zap2docker-stable zap-baseline.py \
-  -t https://staging.searchgap.solnix.store \
+  -t https://staging.gapfinder.solnix.store \
   -r zap-report.html
 ```
 
