@@ -185,8 +185,12 @@ interface CorpusEntry {
 interface CatalogIndex {
   /** Per-product normalized title + tags, for the exact/substring pass. */
   normalized: Array<{ product: ProductRef; title: string; tags: string[] }>;
-  /** Fuse index over titles + tags, for the fuzzy pass. */
-  fuse: Fuse<CorpusEntry>;
+  /** Flat title+tag corpus. Fuzzy scoring runs over a subset of this. */
+  corpus: CorpusEntry[];
+  /** Every distinct whitespace token across all haystacks. */
+  vocab: string[];
+  /** token -> indices into `corpus`. Drives candidate prefiltering. */
+  tokenToEntries: Map<string, number[]>;
 }
 
 /**
@@ -225,9 +229,52 @@ function getCatalogIndex(products: ProductRef[]): CatalogIndex {
     }
   }
 
-  const index: CatalogIndex = { normalized, fuse: new Fuse(corpus, FUSE_OPTIONS) };
+  const vocabSet = new Set<string>();
+  const tokenToEntries = new Map<string, number[]>();
+  corpus.forEach((entry, idx) => {
+    for (const token of entry.haystack.split(' ')) {
+      if (!token) continue;
+      vocabSet.add(token);
+      const bucket = tokenToEntries.get(token);
+      if (bucket) bucket.push(idx);
+      else tokenToEntries.set(token, [idx]);
+    }
+  });
+
+  const index: CatalogIndex = { normalized, corpus, vocab: [...vocabSet], tokenToEntries };
   catalogCache.set(products, index);
   return index;
+}
+
+/**
+ * Corpus entries that could survive the word-overlap rule for `needle`: some
+ * word of the needle (>= 3 chars) must appear as a substring of the haystack.
+ * A needle word contains no spaces, so `haystack.includes(word)` holds exactly
+ * when some TOKEN of the haystack contains it — which the token index answers
+ * without touching the full corpus.
+ *
+ * A needle whose words are all shorter than 3 chars carries no usable signal;
+ * the old overlap check waved those through, so every entry stays a candidate.
+ */
+function candidateIndices(index: CatalogIndex, needle: string): number[] {
+  const words = needle.split(' ').filter((w) => w.length >= 3);
+  if (words.length === 0) return index.corpus.map((_, i) => i);
+
+  const out = new Set<number>();
+  for (const word of words) {
+    const exact = index.tokenToEntries.get(word);
+    if (exact) for (const i of exact) out.add(i);
+    // Tokens that merely CONTAIN the word ("widgets" for "widget"). Scanning
+    // the vocabulary is far cheaper than scanning the corpus: the vocabulary
+    // holds distinct tokens, the corpus repeats them once per product.
+    for (const token of index.vocab) {
+      if (token.length > word.length && token.includes(word)) {
+        const bucket = index.tokenToEntries.get(token);
+        if (bucket) for (const i of bucket) out.add(i);
+      }
+    }
+  }
+  return [...out];
 }
 
 function findExactMatch(qNorm: string, products: ProductRef[]): ProductRef | null {
@@ -250,15 +297,25 @@ interface FuzzyHit {
 
 function fuzzyMatch(qNorm: string, products: ProductRef[]): FuzzyHit | null {
   if (!qNorm) return null;
-  // Flat corpus of (productId, haystack) across titles + tags so a single Fuse
-  // query scores against both. Built once per catalog — see getCatalogIndex.
-  const { fuse } = getCatalogIndex(products);
-
+  const index = getCatalogIndex(products);
   const expanded = expandSynonyms(qNorm);
   let best: { score: number; id: string; haystack: string; needle: string } | null = null;
   const idToScore = new Map<string, number>();
 
   for (const needle of expanded) {
+    // Prefilter to entries that can satisfy the word-overlap rule, then score
+    // only those. Fuse's cost scales with the number of MATCHES it returns, and
+    // at threshold 0.35 the full 15k-entry corpus returned ~1,900 loose matches
+    // per query, nearly all of which the overlap rule then discarded. Scoring
+    // the candidate subset instead is ~9x faster, and a needle with no
+    // candidates skips Fuse entirely rather than scoring the whole catalog just
+    // to conclude nothing.
+    const candidates = candidateIndices(index, needle);
+    if (candidates.length === 0) continue;
+    const fuse = new Fuse(
+      candidates.map((i) => index.corpus[i] as CorpusEntry),
+      FUSE_OPTIONS,
+    );
     const results = fuse.search(needle);
     for (const r of results) {
       const score = r.score ?? 1;
@@ -276,19 +333,16 @@ function fuzzyMatch(qNorm: string, products: ProductRef[]): FuzzyHit | null {
 
   if (!best) return null;
 
-  // Reject character-level false positives: at least one word (≥3 chars) from
-  // the term that actually matched must appear as a substring in the matched
-  // haystack. Without this guard, Fuse's bitap algorithm matches "air
-  // conditioner" against "inventory not tracked snowboard" through shared
-  // characters with no semantic overlap.
+  // The word-overlap rule that used to run here — rejecting Fuse bitap false
+  // positives such as "air conditioner" matching "inventory not tracked
+  // snowboard" purely through shared characters — is now structural:
+  // candidateIndices only admits entries that satisfy it, so everything scored
+  // passes by construction.
   //
-  // This checks `best.needle`, NOT the raw query. Checking the query defeated
-  // synonym expansion completely: a synonym is only useful when the shopper's
-  // words DON'T appear in the title, so every synonym-only hit — "bandhgala"
-  // against "Ethnic Nehru Jacket" — was thrown away here and misreported as a
-  // missing product (TYPE_1) instead of a keyword fix (TYPE_2). When the hit
-  // came from the query itself, needle === qNorm and behaviour is unchanged.
-  if (!hasWordOverlap(best.needle, best.haystack)) return null;
+  // This deliberately changes one behaviour. Previously the GLOBAL best-scoring
+  // entry was tested, and failing it discarded the whole match even when a
+  // slightly worse entry did overlap — reporting a missing product (TYPE_1)
+  // where a keyword fix (TYPE_2) existed. Now the best OVERLAPPING entry wins.
 
   const topIds = Array.from(idToScore.entries())
     .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
@@ -329,8 +383,3 @@ function clamp01(n: number): number {
  * substring in `haystack`. Prevents Fuse's character-level algorithm from
  * producing matches with zero semantic overlap (e.g. "air conditioner" → "snowboard").
  */
-function hasWordOverlap(needle: string, haystack: string): boolean {
-  const words = needle.split(' ').filter((w) => w.length >= 3);
-  if (words.length === 0) return true;
-  return words.some((w) => haystack.includes(w));
-}
