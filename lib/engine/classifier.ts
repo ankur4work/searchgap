@@ -199,7 +199,7 @@ function fuzzyMatch(qNorm: string, products: ProductRef[]): FuzzyHit | null {
   const fuse = new Fuse(corpus, FUSE_OPTIONS);
 
   const expanded = expandSynonyms(qNorm);
-  let best: { score: number; id: string; haystack: string } | null = null;
+  let best: { score: number; id: string; haystack: string; needle: string } | null = null;
   const idToScore = new Map<string, number>();
 
   for (const needle of expanded) {
@@ -212,7 +212,7 @@ function fuzzyMatch(qNorm: string, products: ProductRef[]): FuzzyHit | null {
           idToScore.set(r.item.id, score);
         }
         if (!best || score < best.score) {
-          best = { score, id: r.item.id, haystack: r.item.haystack };
+          best = { score, id: r.item.id, haystack: r.item.haystack, needle };
         }
       }
     }
@@ -220,11 +220,19 @@ function fuzzyMatch(qNorm: string, products: ProductRef[]): FuzzyHit | null {
 
   if (!best) return null;
 
-  // Reject character-level false positives: at least one query word (≥3 chars)
-  // must appear as a substring in the matched haystack. Without this guard,
-  // Fuse's bitap algorithm matches "air conditioner" against "inventory not
-  // tracked snowboard" through shared characters with no semantic overlap.
-  if (!hasWordOverlap(qNorm, best.haystack)) return null;
+  // Reject character-level false positives: at least one word (≥3 chars) from
+  // the term that actually matched must appear as a substring in the matched
+  // haystack. Without this guard, Fuse's bitap algorithm matches "air
+  // conditioner" against "inventory not tracked snowboard" through shared
+  // characters with no semantic overlap.
+  //
+  // This checks `best.needle`, NOT the raw query. Checking the query defeated
+  // synonym expansion completely: a synonym is only useful when the shopper's
+  // words DON'T appear in the title, so every synonym-only hit — "bandhgala"
+  // against "Ethnic Nehru Jacket" — was thrown away here and misreported as a
+  // missing product (TYPE_1) instead of a keyword fix (TYPE_2). When the hit
+  // came from the query itself, needle === qNorm and behaviour is unchanged.
+  if (!hasWordOverlap(best.needle, best.haystack)) return null;
 
   const topIds = Array.from(idToScore.entries())
     .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))

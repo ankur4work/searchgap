@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, BlockStack, InlineStack, Text, Badge, Button, Toast, Frame, ProgressBar, Banner } from '@shopify/polaris';
+import { Card, BlockStack, InlineStack, Text, Badge, Button, Toast, Frame, ProgressBar } from '@shopify/polaris';
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useRef, useEffect } from 'react';
 import type { Plan } from '@prisma/client';
@@ -59,13 +59,6 @@ const JOB_LABELS: Record<string, string> = {
   INGEST_SEARCH: 'Search analytics',
 };
 
-// Weights must match the server-side WEIGHTS in onboarding router.
-const PANEL_WEIGHTS: Record<string, number> = {
-  INGEST_PRODUCTS: 0.6,
-  INGEST_ORDERS: 0.2,
-  INGEST_SEARCH: 0.2,
-};
-
 function SyncProgressPanel({
   jobs,
   hasError,
@@ -91,14 +84,6 @@ function SyncProgressPanel({
     };
   });
 
-  // Recompute overall from per-job effective values so it always matches
-  // what the individual rows show.
-  const overallPct = Math.round(
-    effectiveJobs.reduce((acc, j) => {
-      const pct = j.effectiveStatus === 'DONE' ? 100 : j.effectivePct;
-      return acc + (PANEL_WEIGHTS[j.jobType] ?? 0.33) * pct;
-    }, 0),
-  );
 
   return (
     <Card>
@@ -189,7 +174,6 @@ interface Props {
   revenueImpactCents: number;
   currency: string;
   syncReady: boolean;
-  syncProgressPct: number;
   syncJobs: SyncJob[];
   hasError: boolean;
   onUpgrade: () => void;
@@ -205,7 +189,6 @@ export function DashboardOverview({
   revenueImpactCents,
   currency,
   syncReady,
-  syncProgressPct,
   syncJobs,
   hasError,
   onUpgrade,
@@ -273,7 +256,6 @@ export function DashboardOverview({
     PRO: 'attention',
   };
 
-  const statusAccent = syncReady ? COLOR.success : '#d97706';
   const planAccent = COLOR.primary;
   const queriesAccent = COLOR.accentStrong;
   const revenueAccent = revenueImpactCents > 0 ? COLOR.criticalFg : COLOR.inkSubtle;

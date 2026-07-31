@@ -100,7 +100,6 @@ export default function DashboardPage(): JSX.Element {
   }
 
   const ingestionReady = onboarding.data?.ready ?? true;
-  const ingestPct = onboarding.data?.overallPct ?? 0;
   const ingestJobs = onboarding.data?.jobs ?? [];
   const ingestHasError = onboarding.data?.hasError ?? false;
 
@@ -129,7 +128,6 @@ export default function DashboardPage(): JSX.Element {
           revenueImpactCents={s.revenueImpactCents}
           currency={s.currency}
           syncReady={ingestionReady}
-          syncProgressPct={ingestPct}
           syncJobs={ingestJobs}
           hasError={ingestHasError}
           onUpgrade={openUpgrade}
@@ -165,7 +163,7 @@ export default function DashboardPage(): JSX.Element {
             </Layout.Section>
 
             <Layout.Section>
-              <KeywordFixesSection plan={s.plan} storeId={s.shopDomain} onUpgrade={openUpgrade} />
+              <KeywordFixesSection />
             </Layout.Section>
 
           </Layout>

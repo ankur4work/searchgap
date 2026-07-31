@@ -99,7 +99,7 @@ export function DigestEmail(props: DigestEmailProps): JSX.Element {
             </Heading>
             {gaps.length === 0 && (
               <Text style={{ color: COLORS.muted, fontSize: 13 }}>
-                No high-confidence gaps this week. We'll keep watching.
+                No high-confidence gaps this week. We&rsquo;ll keep watching.
               </Text>
             )}
             {gaps.map((g) => (
@@ -125,7 +125,7 @@ export function DigestEmail(props: DigestEmailProps): JSX.Element {
                 </Heading>
                 {props.fixesApplied.slice(0, 5).map((f, i) => (
                   <Text key={i} style={{ fontSize: 13, color: COLORS.text, margin: '0 0 4px 0' }}>
-                    ✓ "{f.query}" → <em>{f.productTitle ?? 'matched product'}</em>
+                    ✓ &ldquo;{f.query}&rdquo; → <em>{f.productTitle ?? 'matched product'}</em>
                     {f.estimatedImpactCents != null && (
                       <span style={{ color: COLORS.muted }}>
                         {' '}

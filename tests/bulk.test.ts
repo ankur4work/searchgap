@@ -93,8 +93,13 @@ describe('runBulkQuery', () => {
         }),
       );
     const p = runBulkQuery(makeClient(fetchImpl as unknown as typeof fetch), '{x}', () => {});
+    // Attach the rejection handler BEFORE advancing timers: `p` settles during
+    // advanceTimersByTimeAsync, and with nothing attached yet Node reports an
+    // unhandled rejection that fails the whole run even though this assertion
+    // passes.
+    const rejects = expect(p).rejects.toBeInstanceOf(BulkOperationError);
     await vi.advanceTimersByTimeAsync(6_000);
-    await expect(p).rejects.toBeInstanceOf(BulkOperationError);
+    await rejects;
     vi.useRealTimers();
   });
 
@@ -120,8 +125,13 @@ describe('runBulkQuery', () => {
         }),
       );
     const p = runBulkQuery(makeClient(fetchImpl as unknown as typeof fetch), '{x}', () => {});
+    // See the note above: handler must be attached before the timers advance.
+    const rejects = expect(p).rejects.toMatchObject({
+      name: 'BulkOperationError',
+      status: 'CANCELED',
+    });
     await vi.advanceTimersByTimeAsync(6_000);
-    await expect(p).rejects.toMatchObject({ name: 'BulkOperationError', status: 'CANCELED' });
+    await rejects;
     vi.useRealTimers();
   });
 

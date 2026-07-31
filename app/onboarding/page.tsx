@@ -61,7 +61,7 @@ export default function OnboardingPage(): JSX.Element {
       <BlockStack gap="400">
         {hasFailure && (
           <Banner tone="warning" title="One or more ingestion steps failed">
-            We'll retry automatically. If this persists, contact support from the app.
+            We&rsquo;ll retry automatically. If this persists, contact support from the app.
           </Banner>
         )}
         <Card>

@@ -1,4 +1,8 @@
-process.env.NODE_ENV = 'test';
+// @types/node declares NODE_ENV readonly, so assign through an index cast.
+// Tests deliberately flip it to exercise env-dependent branches.
+const mutableEnv = process.env as Record<string, string | undefined>;
+
+mutableEnv.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'error';
 process.env.SHOPIFY_API_KEY = 'test_key';
 process.env.SHOPIFY_API_SECRET = 'test_secret';

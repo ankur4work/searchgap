@@ -109,7 +109,13 @@ export interface ShopifyClientOptions {
 export class ShopifyClient {
   public readonly shopDomain: string;
   private readonly accessToken: string;
-  private readonly fetchImpl: typeof fetch;
+  /**
+   * Readable so callers that must fetch a Shopify-issued URL *outside* the
+   * GraphQL endpoint — the bulk-operation JSONL download — go through the same
+   * fetch implementation. Using the global `fetch` there bypassed every
+   * injected mock and made the download hit the real network from tests.
+   */
+  public readonly fetchImpl: typeof fetch;
 
   constructor(store: Pick<Store, 'shopDomain' | 'accessToken'>, opts: ShopifyClientOptions = {}) {
     this.shopDomain = store.shopDomain;

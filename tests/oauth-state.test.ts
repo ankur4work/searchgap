@@ -19,7 +19,10 @@ const { kv, callMock, setMock } = vi.hoisted(() => {
       }
       throw new Error(`unsupported: ${cmd}`);
     }),
-    setMock: vi.fn(async (key: string, value: string) => {
+    // Rest param matters: the real call is (key, value, 'EX', 300). Typing
+    // only two params made mock.calls a 2-tuple, so asserting on [2]/[3]
+    // failed to typecheck even though those args are really passed.
+    setMock: vi.fn(async (key: string, value: string, ..._rest: unknown[]) => {
       store.set(key, value);
       return 'OK';
     }),

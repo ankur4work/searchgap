@@ -20,7 +20,7 @@ describe('crypto: AES-256-GCM round-trip', () => {
     const ct = encrypt('secret');
     const [v, iv, tag, payload] = ct.split(':');
     const flipped = Buffer.from(payload!, 'base64');
-    flipped[0] ^= 0x01;
+    flipped[0] = (flipped[0] ?? 0) ^ 0x01;
     const tampered = [v, iv, tag, flipped.toString('base64')].join(':');
     expect(() => decrypt(tampered)).toThrow();
   });

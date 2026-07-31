@@ -95,7 +95,7 @@ export async function runBulkQuery<T>(
   }
 
   const objectCount = Number(finished.objectCount ?? '0');
-  await streamJsonl<T>(finished.url, onRecord);
+  await streamJsonl<T>(client.fetchImpl, finished.url, onRecord);
   return { objectCount };
 }
 
@@ -118,8 +118,16 @@ async function pollUntilTerminal(client: ShopifyClient): Promise<BulkOperation> 
   throw new BulkOperationError('Bulk op poll timed out', 'FAILED');
 }
 
-async function streamJsonl<T>(url: string, onRecord: (r: T) => Promise<void> | void): Promise<void> {
-  const res = await fetch(url);
+async function streamJsonl<T>(
+  fetchImpl: typeof fetch,
+  url: string,
+  onRecord: (r: T) => Promise<void> | void,
+): Promise<void> {
+  // Use the client's fetch, not the global one. The download URL is issued by
+  // Shopify and lives outside the GraphQL endpoint, but it must still honour
+  // whatever fetch the caller injected — otherwise tests silently escape to the
+  // real network and any future proxy/timeout wrapper is bypassed here.
+  const res = await fetchImpl(url);
   if (!res.ok || !res.body) {
     throw new BulkOperationError(`Failed to download bulk JSONL (${res.status})`, 'FAILED');
   }

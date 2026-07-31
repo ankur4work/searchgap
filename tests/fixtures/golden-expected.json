@@ -1,0 +1,222 @@
+{
+  "organic cotton t-shirt": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p01"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "cotton tee": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  },
+  "organik cotton tshirt": {
+    "type": "TYPE_2",
+    "confidence": 0.743,
+    "matchedProductIds": [
+      "p01"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "denim joggers": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p02"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "indigo joggers": {
+    "type": "TYPE_3",
+    "confidence": 0.8,
+    "matchedProductIds": [],
+    "reasoningStep": "results_no_click"
+  },
+  "track pants": {
+    "type": "TYPE_2",
+    "confidence": 0.981,
+    "matchedProductIds": [
+      "p02"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "sweatpants": {
+    "type": "TYPE_2",
+    "confidence": 0.981,
+    "matchedProductIds": [
+      "p02"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "bandhgala": {
+    "type": "TYPE_2",
+    "confidence": 0.981,
+    "matchedProductIds": [
+      "p03"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "sherwani jacket": {
+    "type": "TYPE_2",
+    "confidence": 0.981,
+    "matchedProductIds": [
+      "p03"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "nehru jacket": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p03"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "leather wallet": {
+    "type": "TYPE_3",
+    "confidence": 0.8,
+    "matchedProductIds": [],
+    "reasoningStep": "results_no_click"
+  },
+  "wallet for men": {
+    "type": "TYPE_3",
+    "confidence": 0.8,
+    "matchedProductIds": [],
+    "reasoningStep": "results_no_click"
+  },
+  "hiking boots": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p05"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "silk saree": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p06"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "sari": {
+    "type": "TYPE_2",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p06"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "yoga pants": {
+    "type": "TYPE_3",
+    "confidence": 0.8,
+    "matchedProductIds": [],
+    "reasoningStep": "results_no_click"
+  },
+  "power bank": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p08"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "portable charger": {
+    "type": "TYPE_2",
+    "confidence": 0.968,
+    "matchedProductIds": [
+      "p08"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "chopping board": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p09"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "cutting board": {
+    "type": "TYPE_2",
+    "confidence": 0.981,
+    "matchedProductIds": [
+      "p09"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "basmati rice": {
+    "type": "NONE",
+    "confidence": 1,
+    "matchedProductIds": [
+      "p10"
+    ],
+    "reasoningStep": "exact_match"
+  },
+  "aromatic rice": {
+    "type": "TYPE_2",
+    "confidence": 0.981,
+    "matchedProductIds": [
+      "p10"
+    ],
+    "reasoningStep": "fuzzy_match"
+  },
+  "kurta": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  },
+  "lehenga": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  },
+  "palazzo pants": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  },
+  "red sneakers size 10": {
+    "type": "TYPE_4",
+    "confidence": 0.95,
+    "matchedProductIds": [],
+    "reasoningStep": "filter_gap"
+  },
+  "blue shirt medium": {
+    "type": "TYPE_4",
+    "confidence": 0.95,
+    "matchedProductIds": [],
+    "reasoningStep": "filter_gap"
+  },
+  "waterproof boots size 9": {
+    "type": "TYPE_4",
+    "confidence": 0.95,
+    "matchedProductIds": [],
+    "reasoningStep": "filter_gap"
+  },
+  "quantum flux capacitor": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  },
+  "unicorn scarf": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  },
+  "zoomba-flux dial": {
+    "type": "TYPE_1",
+    "confidence": 1,
+    "matchedProductIds": [],
+    "reasoningStep": "product_gap"
+  }
+}

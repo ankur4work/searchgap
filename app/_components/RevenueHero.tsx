@@ -101,13 +101,17 @@ export function RevenueHero({
               </Text>
               <Text as="p" variant="headingLg">
                 {shouldAnimate ? (
-                  <CountUp
-                    end={displayDollars}
-                    duration={1.2}
-                    separator=","
-                    decimals={0}
-                    formattingFn={(n) => formatMoney(Math.round(n * 100), currency)}
-                  />
+                  // Mirrors the `hero-static` hook below so a test can target
+                  // whichever branch rendered.
+                  <span data-testid="hero-animated">
+                    <CountUp
+                      end={displayDollars}
+                      duration={1.2}
+                      separator=","
+                      decimals={0}
+                      formattingFn={(n) => formatMoney(Math.round(n * 100), currency)}
+                    />
+                  </span>
                 ) : (
                   <span data-testid="hero-static">{formatMoney(totalCents, currency)}</span>
                 )}

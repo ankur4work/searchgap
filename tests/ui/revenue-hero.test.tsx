@@ -17,13 +17,21 @@ describe('<RevenueHero>', () => {
     storeId: 'test-shop',
   };
 
+  it('leads with the gap count, not the dollar figure', () => {
+    renderWithPolaris(<RevenueHero {...baseProps} />);
+    // The headline deliberately shows the gap count: it exists regardless of
+    // order history, whereas the revenue figure is a benchmark estimate until
+    // the store accrues orders. The money moved to the secondary panel.
+    expect(screen.getByTestId('hero-headline')).toHaveTextContent('12 gaps found');
+  });
+
   it('animates on first mount (counter starts below target, finishes at target)', async () => {
     renderWithPolaris(<RevenueHero {...baseProps} />);
     // react-countup renders "$0" first tick then ramps to target.
-    // By waiting up to 1500ms (animation duration 1.2s + margin) we should see
+    // By waiting up to 1800ms (animation duration 1.2s + margin) we should see
     // the final "$840" value.
     await waitFor(() => {
-      expect(screen.getByTestId('hero-headline')).toHaveTextContent('$840');
+      expect(screen.getByTestId('hero-animated')).toHaveTextContent('$840');
     }, { timeout: 1800 });
   });
 

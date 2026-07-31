@@ -11,12 +11,6 @@ import {
 } from '@shopify/polaris';
 import { trpc } from '@/lib/trpc/client';
 
-interface Props {
-  plan: 'FREE' | 'GROWTH' | 'PRO';
-  storeId: string;
-  onUpgrade: () => void;
-}
-
 interface Type2Gap {
   id: string;
   queryNorm: string;
@@ -26,7 +20,16 @@ interface Type2Gap {
   locked: boolean;
 }
 
-export function KeywordFixesSection({ plan, storeId, onUpgrade }: Props): JSX.Element {
+/**
+ * Read-only list of TYPE_2 (keyword/synonym) gaps.
+ *
+ * This deliberately has no props: the one-click synonym write-back to Shopify
+ * Search & Discovery was removed along with the write scope (see
+ * docs/APP_LISTING.md), so there is no plan gate, no store context and no
+ * upgrade path to drive from here. Fixes are presented as suggestions the
+ * merchant applies manually.
+ */
+export function KeywordFixesSection(): JSX.Element {
   const gaps = trpc.dashboard.gaps.useQuery({ type: 'TYPE_2', limit: 20, offset: 0 });
 
   return (

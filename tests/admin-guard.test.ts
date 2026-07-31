@@ -4,16 +4,19 @@ import { isAdmin } from '@/lib/admin-guard';
 describe('admin guard', () => {
   const origEmails = process.env.ADMIN_EMAILS;
   const origNodeEnv = process.env.NODE_ENV;
+  // @types/node declares NODE_ENV readonly; this suite's whole point is
+  // flipping it, so go through an index cast.
+  const mutableEnv = process.env as Record<string, string | undefined>;
   beforeEach(() => {
     process.env.ADMIN_EMAILS = origEmails;
-    process.env.NODE_ENV = origNodeEnv;
+    mutableEnv.NODE_ENV = origNodeEnv;
     vi.resetModules();
   });
 
   it('empty allowlist + dev env → open', async () => {
     vi.resetModules();
     process.env.ADMIN_EMAILS = '';
-    process.env.NODE_ENV = 'development';
+    mutableEnv.NODE_ENV = 'development';
     const { isAdmin: fresh } = await import('@/lib/admin-guard');
     expect(fresh('anyone@example.com')).toBe(true);
   });
@@ -21,7 +24,7 @@ describe('admin guard', () => {
   it('empty allowlist + production → CLOSED (fail-safe)', async () => {
     vi.resetModules();
     process.env.ADMIN_EMAILS = '';
-    process.env.NODE_ENV = 'production';
+    mutableEnv.NODE_ENV = 'production';
     const { isAdmin: fresh } = await import('@/lib/admin-guard');
     expect(fresh('anyone@example.com')).toBe(false);
   });
@@ -29,7 +32,7 @@ describe('admin guard', () => {
   it('non-empty allowlist → case-insensitive match', async () => {
     vi.resetModules();
     process.env.ADMIN_EMAILS = 'Alice@example.com, bob@example.com';
-    process.env.NODE_ENV = 'production';
+    mutableEnv.NODE_ENV = 'production';
     const { isAdmin: fresh } = await import('@/lib/admin-guard');
     expect(fresh('alice@example.com')).toBe(true);
     expect(fresh('BOB@EXAMPLE.COM')).toBe(true);

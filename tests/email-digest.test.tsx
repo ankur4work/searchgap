@@ -16,16 +16,13 @@ const base: DigestEmailProps = {
   dashboardUrl: 'https://app.example/?shop=acme.myshopify.com',
   methodologyUrl: 'https://app.example/methodology',
   unsubscribeUrl: 'https://app.example/unsubscribe?token=abc',
-  companyAddress: 'SearchGap · Bangalore, India',
+  companyAddress: 'GapFinder · Bangalore, India',
   plan: 'GROWTH',
 };
 
 describe('DigestEmail rendering', () => {
   it('snapshot: rich data scenario', async () => {
     const html = await render(DigestEmail(base));
-    expect(html).toMatchInlineSnapshot.toString
-      ? undefined
-      : undefined; // appease TS w/ unused
     expect(html).toContain('Acme Fashion');
     expect(html).toContain('$840'); // headline impact
     expect(html).toContain('bandhgala');
@@ -76,7 +73,10 @@ describe('DigestEmail rendering', () => {
 
   it('plaintext render contains key content (accessibility + deliverability)', async () => {
     const text = await render(DigestEmail(base), { plainText: true });
-    expect(text).toContain('Acme Fashion');
+    // Case-insensitive for the store name: the plaintext renderer uppercases
+    // heading text, so it appears as "ACME FASHION: SEARCH THIS WEEK". The
+    // assertion is about the content being present, not its casing.
+    expect(text).toMatch(/acme fashion/i);
     expect(text).toContain('Open dashboard');
     expect(text).toContain('Unsubscribe');
   });

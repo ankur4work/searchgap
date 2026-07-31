@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Unsubscribe · SearchGap',
+  title: 'Unsubscribe · GapFinder',
   robots: { index: false, follow: false },
 };
 
