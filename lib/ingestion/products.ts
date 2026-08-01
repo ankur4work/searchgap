@@ -131,6 +131,8 @@ export async function ingestProducts(
   const ZERO_VECTOR = Array<number>(EMBEDDING_DIM).fill(0);
   const productArray = Array.from(products.values());
   let written = 0;
+  let embedFailedBatches = 0;
+  let productsWithoutVectors = 0;
 
   for (let batchStart = 0; batchStart < productArray.length; batchStart += EMBED_BATCH) {
     const batch = productArray.slice(batchStart, batchStart + EMBED_BATCH);
@@ -146,6 +148,8 @@ export async function ingestProducts(
         { shop: store.shopDomain, batchStart, err: String(embedErr) },
         'embedBatch failed — writing products without vectors',
       );
+      embedFailedBatches += 1;
+      productsWithoutVectors += batch.length;
       vectors = batch.map(() => ZERO_VECTOR);
     }
 
@@ -210,6 +214,27 @@ export async function ingestProducts(
         { total: productArray.length, done },
       );
     }
+  }
+
+  // Escalate: a zero vector matches nothing, so every product that lands
+  // without one is invisible to semantic gap detection. Previously each failed
+  // batch logged a lone warn and the sync reported success, so the feature could
+  // be entirely dead — as it was on Alpine, where onnxruntime-node abort()s —
+  // while every dashboard looked healthy. Log loudly enough to be alertable.
+  if (embedFailedBatches > 0) {
+    const allFailed = productsWithoutVectors >= productArray.length;
+    logger.error(
+      {
+        shop: store.shopDomain,
+        embedFailedBatches,
+        productsWithoutVectors,
+        productsTotal: productArray.length,
+        semanticMatchingDisabled: allFailed,
+      },
+      allFailed
+        ? 'embeddings FAILED for every product — semantic gap matching is disabled for this store'
+        : 'embeddings failed for some products — those are invisible to semantic matching',
+    );
   }
 
   await prisma.store.update({

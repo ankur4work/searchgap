@@ -4,14 +4,27 @@
 # different start commands.
 
 # syntax=docker/dockerfile:1.6
-FROM node:20-alpine AS base
-# OpenSSL: required at runtime by Prisma's query engine on Alpine.
-# libc6-compat: required by some native modules (sharp, msgpackr-extract).
-# libstdc++/libgomp/gcompat: required by onnxruntime-node (used by
-# @xenova/transformers for embeddings). The prebuilt ONNX binary is glibc-linked
-# and uses OpenMP; without these it abort()s with SIGABRT on musl/Alpine, which
-# disables semantic product matching. See lib/ingestion/embed-worker.mjs.
-RUN apk add --no-cache openssl libc6-compat libstdc++ libgomp gcompat
+# glibc base, NOT Alpine — this is load-bearing.
+#
+# onnxruntime-node (pulled in by @xenova/transformers for product embeddings)
+# ships a prebuilt binary linked against glibc. On Alpine/musl it loads via
+# gcompat but then aborts at inference time:
+#
+#   terminate called after throwing an instance of 'Ort::Exception'
+#     what():  Exception caught: No error information
+#
+# That throw happens in C++, below JS, so the worker's try/catch cannot catch
+# it — the process dies with SIGABRT and every product is written WITHOUT a
+# vector, silently disabling semantic gap matching. The musl shims
+# (libc6-compat/gcompat/libstdc++/libgomp) were tried first and are not
+# sufficient; upstream does not support musl. See lib/ingestion/embed-worker.mjs.
+FROM node:20-bookworm-slim AS base
+# openssl: required at runtime by Prisma's query engine.
+# ca-certificates: TLS for the model download from the HuggingFace CDN.
+# libgomp1: OpenMP runtime that onnxruntime-node links against.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 # Pin pnpm store to a known path so BuildKit cache mounts can target it
 # directly (default lives under $HOME which moves with USER directives).
@@ -90,7 +103,14 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+# Debian's shadow tools, not Alpine's busybox addgroup/adduser.
+RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs -m -s /bin/sh nextjs
+
+# Writable model cache for @xenova/transformers. The 90MB MiniLM model is
+# fetched on first embed and cached here; without a directory the runtime user
+# owns, the download fails and embeddings silently fall back to zero vectors.
+ENV TRANSFORMERS_CACHE=/app/.cache/transformers
+RUN mkdir -p /app/.cache/transformers && chown -R nextjs:nodejs /app/.cache
 
 # Production-only node_modules (from the prod-deps stage) — excludes
 # devDependencies to keep the image small.
