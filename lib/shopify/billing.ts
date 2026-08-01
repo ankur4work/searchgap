@@ -132,32 +132,32 @@ export async function fetchActiveSubscription(
 /**
  * Map a Shopify subscription onto our internal entitlement tier.
  *
- * Paid means: an ACTIVE subscription carrying a recurring charge above zero.
+ * Paid means: an ACTIVE subscription whose plan is not the free one.
  *
- * The "above zero" part matters as soon as a **Free plan is defined in the
- * dashboard**. A managed Free plan still produces a real ACTIVE subscription —
- * one with a $0 recurring price — so treating mere existence of a subscription
- * as paid would hand every free merchant the full Growth feature set.
+ * Identified by NAME, which needs justifying because it looks fragile:
  *
- * This is a zero-check, not a price match: it asks "is this plan billable?",
- * never "is this plan $9?". Editing the amount in the dashboard changes nothing
- * here, which is the whole point of Shopify App Pricing.
+ *  - `AppSubscription` in the Admin API exposes no plan handle (verified
+ *    against the schema — `handle` is not a field), so the handle Shopify
+ *    appends to the welcome link is unavailable at read time. The Partner API
+ *    does expose it, but that needs org-level credentials this request has no
+ *    access to.
+ *  - `name` is the plan's "name for merchant invoices", which the dashboard
+ *    marks **"Can't be changed later"**. It's immutable, unlike the listing
+ *    display name, which is what makes this safe.
  *
- * Names are deliberately NOT matched on — they are free text the app owner
- * edits per language, so matching would drop paying merchants to FREE the
- * moment someone renamed a plan.
+ * Price is deliberately NOT the signal. A $0 subscription is ambiguous: it is
+ * either the managed Free plan, or a paid plan granted free to a development
+ * store via "Free for partners and developers". An amount check reads both as
+ * free, which silently locks partners out of the paid features they're meant to
+ * be testing — exactly what happened on the first real install.
  *
- * Caveat: a plan billed purely through usage meters, with no recurring line
- * item, would read as free here. GapFinder has no usage charges; add a meter
- * check alongside this if that ever changes.
- *
- * If a second paid tier is ever added, match on the plan HANDLE (stable) here —
- * never the display name, and never the amount.
+ * Caveat: a plan billed purely through usage meters would still be classified
+ * by name here, which is correct; GapFinder defines no usage charges.
  */
 export function planFromSubscription(sub: ActiveSubscription | null): Plan {
   if (!sub || sub.status !== 'ACTIVE') return 'FREE';
-  const amount = Number(sub.price?.amount ?? '0');
-  if (!Number.isFinite(amount) || amount <= 0) return 'FREE';
+  const name = sub.name.trim().toLowerCase();
+  if (name === env.SHOPIFY_FREE_PLAN_NAME.trim().toLowerCase()) return 'FREE';
   return 'GROWTH';
 }
 

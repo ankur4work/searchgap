@@ -36,13 +36,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'store not found' }, { status: 404 });
   }
 
-  // Return the merchant to the embedded app inside Shopify admin instead of
-  // back to our raw application_url (which in dev is localhost on a port the
-  // browser can't reach).
-  const shopHandle = parsedShop.data.replace(/\.myshopify\.com$/, '');
+  // Send the merchant on to the dashboard with a RELATIVE redirect.
+  //
+  // This used to 302 to https://admin.shopify.com/store/<handle>/apps/<key>.
+  // Shopify loads the welcome link inside the embedded app iframe, and
+  // admin.shopify.com refuses to be framed, so that redirect died with
+  // "admin.shopify.com refused to connect" immediately after a merchant
+  // approved a plan — the worst possible moment. A relative URL stays on our
+  // own origin, which is already allowed in the frame, and App Bridge takes it
+  // from there.
   const returnToApp = (): NextResponse =>
     NextResponse.redirect(
-      `https://admin.shopify.com/store/${encodeURIComponent(shopHandle)}/apps/${encodeURIComponent(env.SHOPIFY_API_KEY)}`,
+      new URL(`/dashboard?shop=${encodeURIComponent(parsedShop.data)}`, env.SHOPIFY_APP_URL),
       302,
     );
 

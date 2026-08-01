@@ -53,6 +53,11 @@ const EnvSchema = z.object({
   // /store/:store_handle/charges/:app_handle/pricing_plans. Must match the
   // handle in the dev dashboard.
   SHOPIFY_APP_HANDLE: z.string().min(1).default('gapfinder'),
+  // Invoice name of the FREE plan in the dashboard. Entitlement is decided by
+  // comparing the subscription's name against this — see planFromSubscription
+  // for why name, and not price, is the right signal. Dashboard marks this
+  // field "Can't be changed later", so it is a stable identifier.
+  SHOPIFY_FREE_PLAN_NAME: z.string().min(1).default('Free'),
 
   // Observability & ops (optional at boot so dev works out of the box).
   SENTRY_DSN: z.string().url().optional(),
@@ -105,6 +110,7 @@ const BUILD_STUB: Env = {
   COMPANY_ADDRESS: 'build stub',
   POSTHOG_HOST: 'https://app.posthog.com',
   SHOPIFY_APP_HANDLE: 'gapfinder',
+  SHOPIFY_FREE_PLAN_NAME: 'Free',
   SENTRY_TRACES_SAMPLE_RATE: 0.1,
   ADMIN_EMAILS: '',
   ADMIN_BEARER: '',

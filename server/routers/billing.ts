@@ -60,6 +60,21 @@ export const billingRouter = router({
       const sub = await fetchActiveSubscription(store);
       const livePlan = planFromSubscription(sub);
 
+      // Log what Shopify actually returned. Without this, a plan resolving the
+      // wrong way is invisible: the app just quietly shows the free tier.
+      ctx.logger.info(
+        {
+          shop: store.shopDomain,
+          subName: sub?.name ?? null,
+          subStatus: sub?.status ?? null,
+          subTest: sub?.test ?? null,
+          priceAmount: sub?.price?.amount ?? null,
+          priceCurrency: sub?.price?.currencyCode ?? null,
+          resolvedPlan: livePlan,
+        },
+        'billing.currentPlan resolved subscription',
+      );
+
       if (livePlan !== store.plan) {
         await ctx.prisma.store.update({
           where: { id: store.id },
