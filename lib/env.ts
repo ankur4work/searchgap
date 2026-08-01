@@ -40,16 +40,19 @@ const EnvSchema = z.object({
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().default('https://app.posthog.com'),
 
-  // Billing
-  // NOTE: do NOT use z.coerce.boolean() — it runs Boolean("false") === true,
-  // so the string "false" would keep test mode ON. Parse the literal instead.
-  BILLING_TEST_MODE: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((v) => v === 'true'),
-  GROWTH_PLAN_PRICE_USD: z.coerce.number().positive().default(9),
-  // nonnegative (not positive) so a 0-day trial — charge immediately — is valid.
-  GROWTH_PLAN_TRIAL_DAYS: z.coerce.number().int().nonnegative().default(0),
+  // Billing — Shopify App Pricing.
+  //
+  // There is deliberately NO price, trial-length or test-mode setting here.
+  // Plans are defined in the Shopify dev dashboard, Shopify hosts the plan
+  // selection page and owns the charge, and it forces test mode on development
+  // stores by itself. The app owner changes pricing in the dashboard and it
+  // takes effect immediately with no deploy — a price in env or code would
+  // silently disagree with what Shopify actually bills.
+  //
+  // The app handle is config, not pricing: it addresses the hosted plan page at
+  // /store/:store_handle/charges/:app_handle/pricing_plans. Must match the
+  // handle in the dev dashboard.
+  SHOPIFY_APP_HANDLE: z.string().min(1).default('gapfinder'),
 
   // Observability & ops (optional at boot so dev works out of the box).
   SENTRY_DSN: z.string().url().optional(),
@@ -101,9 +104,7 @@ const BUILD_STUB: Env = {
   SUPPORT_EMAIL: 'support@build.invalid',
   COMPANY_ADDRESS: 'build stub',
   POSTHOG_HOST: 'https://app.posthog.com',
-  BILLING_TEST_MODE: false,
-  GROWTH_PLAN_PRICE_USD: 9,
-  GROWTH_PLAN_TRIAL_DAYS: 0,
+  SHOPIFY_APP_HANDLE: 'gapfinder',
   SENTRY_TRACES_SAMPLE_RATE: 0.1,
   ADMIN_EMAILS: '',
   ADMIN_BEARER: '',

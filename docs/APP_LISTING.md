@@ -38,7 +38,17 @@ Shoppers leave when search returns nothing. GapFinder tracks searches on your st
 Leave blank for this submission. (Do not link a password-protected dev store —
 guideline violation. Build a public demo store later if conversion matters.)
 
-## Pricing (configure in the dashboard pricing section, not free text)
+## Pricing (Shopify App Pricing — configured in the dashboard, not in code)
+
+The app uses **Shopify App Pricing**: plans are defined in the dev dashboard,
+Shopify hosts the plan selection page and owns the charge. The app never calls
+appSubscriptionCreate, and no price is stored in env or source — change the
+amount in the dashboard and it takes effect immediately, with no deploy.
+
+Set each plan's **Welcome link** to `/billing/callback` so the app reconciles
+plan state as soon as a merchant approves.
+
+Amounts below are the launch intent; the dashboard is the source of truth.
 
 | | Free | Growth |
 |---|---|---|

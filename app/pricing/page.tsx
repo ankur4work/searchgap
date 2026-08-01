@@ -1,13 +1,22 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Page, BlockStack, Card, Text, Button, Banner, Modal } from '@shopify/polaris';
+import { Page, BlockStack, Card, Text, Button, Banner } from '@shopify/polaris';
 import { trpc } from '@/lib/trpc/client';
 import { useTrpcAuth } from '@/lib/trpc/provider';
 import { UpgradeModal } from '../_components/UpgradeModal';
 import { analytics } from '../_components/analytics-client';
 import { BRAND, COLOR, RADIUS, SHADOW } from '../_components/brand';
 
+/**
+ * Plan comparison. Deliberately FEATURE-ONLY — no amounts.
+ *
+ * Under Shopify App Pricing the price lives in the dev dashboard and the app
+ * owner can change it at any time without a deploy. Any figure printed here
+ * would be a stale copy that contradicts Shopify's own plan page and the actual
+ * charge. The only money this page ever shows is the merchant's real, live
+ * subscription price, read back from Shopify.
+ */
 const FREE_FEATURES = [
   { included: true, label: 'Real-time storefront tracker (auto-installs, no code)' },
   { included: true, label: 'Top 5 highest-revenue search gaps visible' },
@@ -29,22 +38,33 @@ const GROWTH_FEATURES = [
   'Priority email support',
 ];
 
+/** Format the live subscription price using the currency Shopify reported. */
+function formatLivePrice(price: { amount: string; currencyCode: string; interval: string }): string {
+  const amount = Number(price.amount);
+  const formatted = Number.isFinite(amount)
+    ? new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: price.currencyCode,
+        // Shopify returns "9.00"; drop cents when there are none.
+        minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+      }).format(amount)
+    : `${price.amount} ${price.currencyCode}`;
+  const period = price.interval === 'ANNUAL' ? 'year' : 'month';
+  return `${formatted} / ${period}`;
+}
+
 export default function PricingPage(): JSX.Element {
   const auth = useTrpcAuth();
-  const planQ = trpc.billing.currentPlan.useQuery(undefined, { enabled: auth.ready });
+  const planQ = trpc.billing.currentPlan.useQuery(undefined, {
+    enabled: auth.ready,
+    // The merchant may be returning from Shopify's plan page having just
+    // changed plan — refetch so the card reflects it without a manual reload.
+    refetchOnWindowFocus: true,
+  });
   const summaryQ = trpc.dashboard.summary.useQuery(undefined, { enabled: auth.ready });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [downgradeOpen, setDowngradeOpen] = useState(false);
   const plan = planQ.data?.plan ?? 'FREE';
-  const utils = trpc.useUtils();
-
-  const cancelSub = trpc.billing.cancelSubscription.useMutation({
-    onSuccess: () => {
-      setDowngradeOpen(false);
-      void utils.billing.currentPlan.invalidate();
-      void utils.dashboard.summary.invalidate();
-    },
-  });
+  const livePrice = planQ.data?.price ?? null;
 
   const openUpgrade = (): void => {
     analytics.track('upgrade_cta_clicked', { where: 'pricing' });
@@ -77,7 +97,19 @@ export default function PricingPage(): JSX.Element {
 
         {plan === 'GROWTH' && (
           <Banner tone="success" title="You&rsquo;re on Growth">
-            <p>Thanks for upgrading. You have access to everything below.</p>
+            <p>
+              Thanks for upgrading. You have access to everything below.
+              {livePrice ? ` Your plan renews at ${formatLivePrice(livePrice)}.` : ''}
+            </p>
+          </Banner>
+        )}
+
+        {planQ.data?.stale && (
+          <Banner tone="warning" title="Showing your last known plan">
+            <p>
+              We couldn&rsquo;t reach Shopify to confirm your subscription just now. Plan details
+              may be out of date — reload in a moment.
+            </p>
           </Banner>
         )}
 
@@ -87,8 +119,7 @@ export default function PricingPage(): JSX.Element {
             style={{
               flex: '1 1 320px',
               minWidth: 280,
-              border:
-                plan === 'FREE' ? `2px solid ${COLOR.primary}` : `1px solid ${COLOR.border}`,
+              border: plan === 'FREE' ? `2px solid ${COLOR.primary}` : `1px solid ${COLOR.border}`,
               borderRadius: RADIUS.lg,
               padding: '28px 30px',
               background: COLOR.surface,
@@ -120,10 +151,7 @@ export default function PricingPage(): JSX.Element {
               Get a feel for your search gaps before paying anything.
             </Text>
             <div style={{ marginTop: 14, marginBottom: 18 }}>
-              <span style={{ fontSize: 40, fontWeight: 800, color: COLOR.ink }}>$0</span>
-              <span style={{ fontSize: 14, color: COLOR.inkSubtle, marginLeft: 6 }}>
-                / month forever
-              </span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: COLOR.ink }}>Free forever</span>
             </div>
             <ul style={{ padding: 0, listStyle: 'none', marginTop: 8 }}>
               {FREE_FEATURES.map((f) => (
@@ -159,9 +187,7 @@ export default function PricingPage(): JSX.Element {
               flex: '1 1 320px',
               minWidth: 280,
               border:
-                plan === 'GROWTH'
-                  ? `2px solid ${COLOR.success}`
-                  : `2px solid ${COLOR.primary}`,
+                plan === 'GROWTH' ? `2px solid ${COLOR.success}` : `2px solid ${COLOR.primary}`,
               borderRadius: RADIUS.lg,
               padding: '28px 30px',
               background:
@@ -169,8 +195,7 @@ export default function PricingPage(): JSX.Element {
                   ? COLOR.surface
                   : `linear-gradient(180deg, ${COLOR.tint50} 0%, ${COLOR.surface} 60%)`,
               position: 'relative',
-              boxShadow:
-                plan === 'GROWTH' ? 'none' : SHADOW.md,
+              boxShadow: plan === 'GROWTH' ? 'none' : SHADOW.md,
             }}
           >
             <div
@@ -196,21 +221,18 @@ export default function PricingPage(): JSX.Element {
               For merchants ready to act on every gap and recover the revenue.
             </Text>
             <div style={{ marginTop: 14, marginBottom: 18 }}>
-              <span style={{ fontSize: 40, fontWeight: 800, color: COLOR.ink }}>$9</span>
-              <span style={{ fontSize: 14, color: COLOR.inkSubtle, marginLeft: 6 }}>/ month</span>
-              <span
-                style={{
-                  marginLeft: 12,
-                  fontSize: 11,
-                  background: COLOR.successBg,
-                  color: COLOR.successFg,
-                  padding: '2px 8px',
-                  borderRadius: RADIUS.pill,
-                  fontWeight: 700,
-                }}
-              >
-                Cancel anytime
-              </span>
+              {/* Only ever the merchant's REAL price, straight from Shopify.
+                  On Free there is no subscription to read, so we point at the
+                  plan page rather than guess at an amount. */}
+              {plan === 'GROWTH' && livePrice ? (
+                <span style={{ fontSize: 28, fontWeight: 800, color: COLOR.ink }}>
+                  {formatLivePrice(livePrice)}
+                </span>
+              ) : (
+                <span style={{ fontSize: 20, fontWeight: 700, color: COLOR.inkMuted }}>
+                  See current pricing on Shopify
+                </span>
+              )}
             </div>
             <ul style={{ padding: 0, listStyle: 'none', marginTop: 8 }}>
               {GROWTH_FEATURES.map((f, i) => (
@@ -233,28 +255,21 @@ export default function PricingPage(): JSX.Element {
                 </li>
               ))}
             </ul>
-            {plan === 'FREE' && (
-              <div style={{ marginTop: 22 }}>
-                <Button variant="primary" size="large" onClick={openUpgrade} fullWidth>
-                  Start Growth · $9/mo
-                </Button>
-                <div style={{ fontSize: 11, color: COLOR.inkSubtle, marginTop: 10, textAlign: 'center' }}>
-                  Cancel anytime · Billed through Shopify · No credit card extra
-                </div>
+            <div style={{ marginTop: 22 }}>
+              <Button variant="primary" size="large" onClick={openUpgrade} fullWidth>
+                {plan === 'GROWTH' ? 'Manage plan' : 'View plans'}
+              </Button>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: COLOR.inkSubtle,
+                  marginTop: 10,
+                  textAlign: 'center',
+                }}
+              >
+                Billed through Shopify · change or cancel any time
               </div>
-            )}
-            {plan === 'GROWTH' && (
-              <div style={{ marginTop: 22 }}>
-                <Button
-                  variant="plain"
-                  tone="critical"
-                  onClick={() => setDowngradeOpen(true)}
-                  fullWidth
-                >
-                  Downgrade to Free
-                </Button>
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -267,7 +282,7 @@ export default function PricingPage(): JSX.Element {
             {[
               {
                 q: 'How does billing work?',
-                a: 'You start Growth instantly and Shopify bills $9 as soon as you approve. Cancel from your Shopify admin any time — billing stops immediately, no questions.',
+                a: 'Shopify handles it end to end. You pick a plan on Shopify’s plan page, approve the charge, and it appears on your regular Shopify invoice. Cancel from your Shopify admin any time — billing stops immediately, no questions.',
               },
               {
                 q: 'What does a "gap" mean?',
@@ -279,7 +294,7 @@ export default function PricingPage(): JSX.Element {
               },
               {
                 q: 'Can I downgrade later?',
-                a: 'Yes — drop back to Free at any time from Shopify’s billing UI. Your historical data stays.',
+                a: 'Yes — switch back to Free at any time from Shopify’s plan page. Your historical data stays.',
               },
             ].map((item) => (
               <BlockStack key={item.q} gap="100">
@@ -300,33 +315,6 @@ export default function PricingPage(): JSX.Element {
         onClose={() => setUpgradeOpen(false)}
         storeId={summaryQ.data?.shopDomain ?? ''}
       />
-
-      <Modal
-        open={downgradeOpen}
-        onClose={() => setDowngradeOpen(false)}
-        title="Downgrade to Free?"
-        primaryAction={{
-          content: 'Yes, downgrade',
-          destructive: true,
-          loading: cancelSub.isPending,
-          onAction: () => cancelSub.mutate(),
-        }}
-        secondaryActions={[{ content: 'Keep Growth', onAction: () => setDowngradeOpen(false) }]}
-      >
-        <Modal.Section>
-          <Text as="p">
-            Your subscription will be cancelled immediately. You&rsquo;ll lose access to the full
-            gap list, revenue estimates, and digest emails. Your historical data stays.
-          </Text>
-          {cancelSub.isError && (
-            <div style={{ marginTop: 12 }}>
-              <Text as="p" tone="critical">
-                {cancelSub.error.message}
-              </Text>
-            </div>
-          )}
-        </Modal.Section>
-      </Modal>
     </Page>
   );
 }

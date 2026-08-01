@@ -2,29 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { env } from '@/lib/env';
 import { logger } from '@/lib/logger';
-import { ShopifyClient } from '@/lib/shopify/client';
+import { fetchActiveSubscription, planFromSubscription } from '@/lib/shopify/billing';
 import { ShopDomainSchema } from '@/lib/shopify/validators';
 import { track } from '@/lib/analytics';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const APP_SUBSCRIPTION_QUERY = /* GraphQL */ `
-  query AppSub($id: ID!) {
-    node(id: $id) {
-      __typename
-      ... on AppSubscription { id name status test }
-    }
-  }
-`;
-
-interface AppSubResp {
-  node: { __typename: string; id: string; name: string; status: string; test: boolean } | null;
-}
-
+/**
+ * Welcome link for Shopify App Pricing.
+ *
+ * Configure this path as the plan's "Welcome link" in the dev dashboard.
+ * Shopify redirects here after a merchant approves a plan and appends
+ * `plan_handle` plus the shop domain — note there is NO `charge_id`, unlike the
+ * old Billing API returnUrl this route used to serve.
+ *
+ * So rather than trusting a query param or a subscription id we stored at
+ * create-time (the app no longer creates subscriptions at all), we ask Shopify
+ * what the merchant is actually on. That also makes the route safe to hit
+ * directly or replay: it simply reconciles against live state.
+ */
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const chargeId = req.nextUrl.searchParams.get('charge_id');
   const shop = req.nextUrl.searchParams.get('shop');
+  const planHandle = req.nextUrl.searchParams.get('plan_handle');
 
   const parsedShop = ShopDomainSchema.safeParse(shop);
   if (!parsedShop.success) {
@@ -36,67 +36,79 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'store not found' }, { status: 404 });
   }
 
-  // Shopify appends a `charge_id` numeric; the ID we stored is a gid. Use the
-  // GID we persisted at create-time; fall back to the raw param only if we
-  // must (belt-and-suspenders for older flows).
-  const subscriptionGid = store.shopifyChargeId ?? (chargeId ? `gid://shopify/AppSubscription/${chargeId}` : null);
-  if (!subscriptionGid) {
-    return NextResponse.json({ error: 'no subscription id on record' }, { status: 400 });
-  }
-
-  const client = new ShopifyClient(store);
-  const resp = await client.graphql<AppSubResp>(APP_SUBSCRIPTION_QUERY, { id: subscriptionGid });
-  const sub = resp.data?.node;
-
   // Return the merchant to the embedded app inside Shopify admin instead of
   // back to our raw application_url (which in dev is localhost on a port the
   // browser can't reach).
   const shopHandle = parsedShop.data.replace(/\.myshopify\.com$/, '');
-  const returnToApp = () =>
+  const returnToApp = (): NextResponse =>
     NextResponse.redirect(
       `https://admin.shopify.com/store/${encodeURIComponent(shopHandle)}/apps/${encodeURIComponent(env.SHOPIFY_API_KEY)}`,
       302,
     );
 
-  if (!sub || sub.__typename !== 'AppSubscription') {
-    logger.warn({ shop: parsedShop.data, subscriptionGid }, 'billing callback: subscription not found');
+  let sub;
+  try {
+    sub = await fetchActiveSubscription(store);
+  } catch (err) {
+    // Don't strand the merchant on an error page — the app_subscriptions/update
+    // webhook and billing.currentPlan both reconcile plan state independently.
+    logger.warn(
+      { shop: store.shopDomain, err: (err as Error).message },
+      'billing callback: could not read subscription; deferring to webhook',
+    );
     return returnToApp();
   }
 
-  if (sub.status === 'ACTIVE') {
+  const plan = planFromSubscription(sub);
+
+  if (sub && plan === 'GROWTH') {
+    // Amount comes from the live subscription, never from config: the app
+    // owner sets pricing in the dashboard and it must be recorded as billed.
+    const amountCents = sub.price ? Math.round(Number(sub.price.amount) * 100) : 0;
+
+    const alreadyRecorded = await prisma.billingEvent.findFirst({
+      where: { storeId: store.id, shopifyChargeId: sub.id, eventType: 'charge_activated' },
+    });
+
     await prisma.$transaction([
       prisma.store.update({
         where: { id: store.id },
-        data: { plan: 'GROWTH', graceEndsAt: null },
+        data: { plan: 'GROWTH', graceEndsAt: null, shopifyChargeId: sub.id },
       }),
-      prisma.billingEvent.create({
-        data: {
-          storeId: store.id,
-          eventType: 'charge_activated',
-          amountCents: Math.round(env.GROWTH_PLAN_PRICE_USD * 100),
-          shopifyChargeId: sub.id,
-        },
-      }),
+      ...(alreadyRecorded
+        ? []
+        : [
+            prisma.billingEvent.create({
+              data: {
+                storeId: store.id,
+                eventType: 'charge_activated',
+                amountCents: Number.isFinite(amountCents) ? amountCents : 0,
+                shopifyChargeId: sub.id,
+              },
+            }),
+          ]),
     ]);
+
     track({
       event: 'billing_charge_activated',
       distinctId: store.id,
-      properties: { shop: store.shopDomain, plan: 'GROWTH', chargeId: sub.id },
-    });
-    logger.info({ shop: store.shopDomain, chargeId: sub.id }, 'Plan upgraded to GROWTH');
-  } else if (sub.status === 'DECLINED' || sub.status === 'CANCELLED' || sub.status === 'EXPIRED') {
-    await prisma.billingEvent.create({
-      data: {
-        storeId: store.id,
-        eventType: `charge_${sub.status.toLowerCase()}`,
-        amountCents: 0,
-        shopifyChargeId: sub.id,
+      properties: {
+        shop: store.shopDomain,
+        plan: 'GROWTH',
+        chargeId: sub.id,
+        planHandle,
+        planName: sub.name,
       },
     });
-    logger.info({ shop: store.shopDomain, status: sub.status }, 'Subscription rejected at callback');
+    logger.info(
+      { shop: store.shopDomain, chargeId: sub.id, planHandle, amountCents },
+      'Plan upgraded to GROWTH',
+    );
   } else {
-    // PENDING — user may still be approving. Land them back anyway.
-    logger.info({ shop: store.shopDomain, status: sub.status }, 'Subscription still pending at callback');
+    logger.info(
+      { shop: store.shopDomain, status: sub?.status ?? 'none', planHandle },
+      'billing callback: no active subscription yet',
+    );
   }
 
   return returnToApp();

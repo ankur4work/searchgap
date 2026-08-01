@@ -360,8 +360,8 @@ export function DashboardOverview({
                 See the full picture
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
-                Free shows your top 5 gaps. Growth unlocks every gap with $ revenue estimates and
-                1-click synonym sync. $9/mo, cancel anytime.
+                Free shows your top 5 gaps. Growth unlocks every gap with revenue estimates,
+                keyword fix suggestions and the weekly digest. Cancel anytime.
               </Text>
             </BlockStack>
             <InlineStack gap="200">

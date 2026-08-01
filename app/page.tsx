@@ -273,7 +273,7 @@ export default function HomePage(): JSX.Element {
                       cursor: 'pointer',
                     }}
                   >
-                    Start Growth · $9/mo
+                    View plans
                   </button>
                 )}
               </div>
