@@ -30,6 +30,69 @@ export const dashboardRouter = router({
     );
   }),
 
+  /**
+   * Daily search + gap volume for the trend chart.
+   *
+   * Two series on ONE scale (both are counts of searches), so they are directly
+   * comparable — deliberately not a dual-axis chart. `gaps` is the subset of
+   * `searches` whose query currently classifies as a gap, which is why it is
+   * always <= searches and reads as an area beneath it.
+   *
+   * Days with no activity are emitted as zeros rather than omitted: a gap in
+   * the x-axis would imply "no data" when the truth is "no searches", and it
+   * would also make the line lie by connecting across the missing days.
+   */
+  searchTrend: protectedProcedure
+    .input(z.object({ days: z.number().int().min(7).max(90).default(30) }).optional())
+    .query(async ({ ctx, input }) => {
+      if (!ctx.session.storeId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No store in session' });
+      }
+      const days = input?.days ?? 30;
+      const storeId = ctx.session.storeId;
+      const since = new Date(Date.now() - days * 86_400_000);
+
+      const rows = await ctx.prisma.$queryRaw<
+        Array<{ day: Date; searches: number; gaps: number }>
+      >`
+        SELECT sq.date_bucket AS day,
+               SUM(sq.occurrence_count)::int AS searches,
+               SUM(CASE WHEN c.id IS NOT NULL THEN sq.occurrence_count ELSE 0 END)::int AS gaps
+        FROM search_queries sq
+        LEFT JOIN classifications c
+          ON c.store_id = sq.store_id
+         AND c.query_norm = sq.query_normalized
+        WHERE sq.store_id = ${storeId}
+          AND sq.occurred_at >= ${since}
+        GROUP BY sq.date_bucket
+        ORDER BY sq.date_bucket
+      `;
+
+      const byDay = new Map(
+        rows.map((r) => [
+          new Date(r.day).toISOString().slice(0, 10),
+          { searches: Number(r.searches), gaps: Number(r.gaps) },
+        ]),
+      );
+
+      const series: Array<{ date: string; searches: number; gaps: number }> = [];
+      const cursor = new Date(Date.now() - (days - 1) * 86_400_000);
+      for (let i = 0; i < days; i += 1) {
+        const key = new Date(
+          Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), cursor.getUTCDate()),
+        )
+          .toISOString()
+          .slice(0, 10);
+        const hit = byDay.get(key);
+        series.push({ date: key, searches: hit?.searches ?? 0, gaps: hit?.gaps ?? 0 });
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+
+      const totalSearches = series.reduce((acc, d) => acc + d.searches, 0);
+      const totalGaps = series.reduce((acc, d) => acc + d.gaps, 0);
+      return { days, series, totalSearches, totalGaps };
+    }),
+
   gaps: protectedProcedure
     .input(
       z.object({

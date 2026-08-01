@@ -8,6 +8,7 @@ import { RevenueHero } from '../_components/RevenueHero';
 import { DashboardOverview } from '../_components/DashboardOverview';
 import { ProductGapsSection } from '../_components/ProductGapsSection';
 import { KeywordFixesSection } from '../_components/KeywordFixesSection';
+import { SearchTrendChart } from '../_components/SearchTrendChart';
 import {
   InsufficientDataEmpty,
   NoGapsFoundEmpty,
@@ -141,6 +142,11 @@ export default function DashboardPage(): JSX.Element {
             passwordProtected={trackerQ.data?.passwordProtected ?? null}
           />
         )}
+
+        {/* Deliberately NOT gated behind hasGaps: the trend is most reassuring
+            exactly when the gap list is empty, because it shows tracking is
+            alive. Hiding it then would make a working install look dead. */}
+        {!isWaitingForFirstSearch && <SearchTrendChart />}
 
         {showInsufficient && <InsufficientDataEmpty />}
         {showNoGaps && <NoGapsFoundEmpty />}
