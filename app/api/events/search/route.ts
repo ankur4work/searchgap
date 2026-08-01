@@ -9,6 +9,13 @@ import { normalizeQuery, dateBucketUTC } from '@/lib/ingestion/normalize';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/**
+ * How long to wait after the last search before classifying. Long enough to
+ * collapse a shopper trying several queries in a row into one run, short enough
+ * that opening the app straight after searching already shows the gap.
+ */
+const REALTIME_CLASSIFY_DEBOUNCE_MS = 8_000;
+
 const EventSchema = z.object({
   shop: ShopDomainSchema,
   event: z.enum(['search_submitted', 'search_viewed']),
@@ -132,6 +139,40 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       'search event persist failed',
     );
     return cors(NextResponse.json({ error: 'write failed' }, { status: 500 }));
+  }
+
+  // Classify in near-real-time.
+  //
+  // Capture used to be instant while classification only ran on the hourly cron
+  // or a manual "Refresh data" click, so a shopper (or an App Store reviewer)
+  // could search, open the app, and see nothing — the gap existed but no job
+  // had turned it into one.
+  //
+  // Debounced by a fixed jobId plus a delay: a burst of searches collapses into
+  // ONE classify run a few seconds after the last one, instead of one run per
+  // keystroke-burst. BullMQ ignores an add() whose jobId is already waiting or
+  // delayed, and the job is removed on completion so the next search can arm it
+  // again.
+  //
+  // Best-effort: a Redis hiccup must never fail the tracker beacon, which the
+  // storefront cannot retry. The cron remains the backstop.
+  try {
+    const { classifyQueue } = await import('@/jobs/queue');
+    await classifyQueue.add(
+      'classify:store',
+      { storeId: store.id, origin: 'post-ingest' },
+      {
+        jobId: `rt-classify-${store.id}`,
+        delay: REALTIME_CLASSIFY_DEBOUNCE_MS,
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    );
+  } catch (err) {
+    logger.warn(
+      { shop, err: (err as Error).message },
+      'realtime classify enqueue failed — cron will still pick this up',
+    );
   }
 
   return cors(new NextResponse(null, { status: 204 }));

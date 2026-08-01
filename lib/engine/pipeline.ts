@@ -200,7 +200,27 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
   // Classification changed the dashboard numbers — bust the per-store cache.
   await invalidate(`dash:summary:v1:${store.id}`);
 
-  logger.info({ ...summary }, 'classification.complete');
+  // Occurrence distribution and the AOV basis, so an implausible headline
+  // figure can be diagnosed from logs alone. Revenue is
+  // occurrences x AOV x benchmark, so a surprising total is nearly always one
+  // of: over-counted occurrences, or a fallback AOV standing in for a store
+  // with no order history. Counts only — never the query text.
+  const occurrences = aggregates.map((a) => Number(a.occurrence_count));
+  const occurrenceTotal = occurrences.reduce((acc, n) => acc + n, 0);
+  logger.info(
+    {
+      ...summary,
+      occurrenceTotal,
+      occurrenceMax: occurrences.length ? Math.max(...occurrences) : 0,
+      occurrenceAvg: occurrences.length
+        ? Math.round((occurrenceTotal / occurrences.length) * 10) / 10
+        : 0,
+      aovCents: store.aovCents,
+      aovIsFallback: store.aovCents == null,
+      storeCategory: store.category ?? null,
+    },
+    'classification.complete',
+  );
   await redisPub.publish(CLASSIFICATION_COMPLETE_CHANNEL, JSON.stringify(summary));
 
   return summary;
