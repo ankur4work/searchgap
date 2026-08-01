@@ -187,6 +187,31 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
 
   await runInBatches(aggregates, engineConfig.parallelism, runQuery);
 
+  // Drop gaps whose queries have aged out of the window.
+  //
+  // Classification is keyed on (store_id, query_norm) and was only ever
+  // upserted, never pruned, so rows accumulated forever. The dashboard counts
+  // and sums that table unfiltered, so it reported every gap the store had EVER
+  // had — "30 gaps / $15,015" while the current 30-day window held 3 queries —
+  // and re-running classification could not bring the number down. That reads
+  // exactly like a frozen dashboard, and it also contradicts the UI's own
+  // "in the last 30 days" label.
+  //
+  // Done as a NOT EXISTS against search_queries rather than a NOT IN over the
+  // in-memory aggregate list: the list can hold thousands of entries on a busy
+  // store, and a parameter per query would eventually hit Postgres' limit.
+  // RevenueEstimate rows cascade on delete.
+  const prunedGaps = await prisma.$executeRaw`
+    DELETE FROM classifications c
+    WHERE c.store_id = ${store.id}
+      AND NOT EXISTS (
+        SELECT 1 FROM search_queries sq
+        WHERE sq.store_id = c.store_id
+          AND sq.query_normalized = c.query_norm
+          AND sq.occurred_at >= ${since}
+      )
+  `;
+
   const summary: ClassificationRunSummary = {
     storeId: store.id,
     windowDays,
@@ -218,6 +243,7 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
       aovCents: store.aovCents,
       aovIsFallback: store.aovCents == null,
       storeCategory: store.category ?? null,
+      prunedGaps,
     },
     'classification.complete',
   );
