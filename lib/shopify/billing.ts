@@ -132,16 +132,32 @@ export async function fetchActiveSubscription(
 /**
  * Map a Shopify subscription onto our internal entitlement tier.
  *
- * Deliberately keyed off the *existence* of an ACTIVE subscription rather than
- * the plan's name or price. Names are free text the app owner edits in the
- * dashboard, so matching on them would silently drop every merchant to FREE the
- * moment someone renamed a plan or shipped a second language.
+ * Paid means: an ACTIVE subscription carrying a recurring charge above zero.
+ *
+ * The "above zero" part matters as soon as a **Free plan is defined in the
+ * dashboard**. A managed Free plan still produces a real ACTIVE subscription —
+ * one with a $0 recurring price — so treating mere existence of a subscription
+ * as paid would hand every free merchant the full Growth feature set.
+ *
+ * This is a zero-check, not a price match: it asks "is this plan billable?",
+ * never "is this plan $9?". Editing the amount in the dashboard changes nothing
+ * here, which is the whole point of Shopify App Pricing.
+ *
+ * Names are deliberately NOT matched on — they are free text the app owner
+ * edits per language, so matching would drop paying merchants to FREE the
+ * moment someone renamed a plan.
+ *
+ * Caveat: a plan billed purely through usage meters, with no recurring line
+ * item, would read as free here. GapFinder has no usage charges; add a meter
+ * check alongside this if that ever changes.
  *
  * If a second paid tier is ever added, match on the plan HANDLE (stable) here —
  * never the display name, and never the amount.
  */
 export function planFromSubscription(sub: ActiveSubscription | null): Plan {
   if (!sub || sub.status !== 'ACTIVE') return 'FREE';
+  const amount = Number(sub.price?.amount ?? '0');
+  if (!Number.isFinite(amount) || amount <= 0) return 'FREE';
   return 'GROWTH';
 }
 
