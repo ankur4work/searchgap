@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Page, BlockStack, Card, Text, Button, Banner } from '@shopify/polaris';
+import { Page, BlockStack, Card, Text, Button, Banner, Modal } from '@shopify/polaris';
 import { trpc } from '@/lib/trpc/client';
 import { useTrpcAuth } from '@/lib/trpc/provider';
 import { UpgradeModal } from '../_components/UpgradeModal';
 import { analytics } from '../_components/analytics-client';
+import { redirectTop } from '../_components/redirect-top';
 import { BRAND, COLOR, RADIUS, SHADOW } from '../_components/brand';
 
 /**
@@ -63,8 +64,21 @@ export default function PricingPage(): JSX.Element {
   });
   const summaryQ = trpc.dashboard.summary.useQuery(undefined, { enabled: auth.ready });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const plan = planQ.data?.plan ?? 'FREE';
   const livePrice = planQ.data?.price ?? null;
+
+  // Cancellation finishes on Shopify's plan page — appSubscriptionCancel is
+  // Partner-API-only for managed subscriptions and needs org credentials this
+  // session doesn't have, so the app cannot cancel on the merchant's behalf.
+  const cancelUrl = trpc.billing.planSelectionUrl.useQuery(undefined, { enabled: cancelOpen });
+
+  const confirmCancel = (): void => {
+    analytics.track('cancel_cta_clicked', { where: 'pricing' });
+    const url = cancelUrl.data?.url;
+    if (!url) return;
+    redirectTop(url);
+  };
 
   const openUpgrade = (): void => {
     analytics.track('upgrade_cta_clicked', { where: 'pricing' });
@@ -259,6 +273,13 @@ export default function PricingPage(): JSX.Element {
               <Button variant="primary" size="large" onClick={openUpgrade} fullWidth>
                 {plan === 'GROWTH' ? 'Manage plan' : 'View plans'}
               </Button>
+              {plan === 'GROWTH' && (
+                <div style={{ marginTop: 8 }}>
+                  <Button variant="plain" tone="critical" onClick={() => setCancelOpen(true)} fullWidth>
+                    Cancel subscription
+                  </Button>
+                </div>
+              )}
               <div
                 style={{
                   fontSize: 11,
@@ -315,6 +336,42 @@ export default function PricingPage(): JSX.Element {
         onClose={() => setUpgradeOpen(false)}
         storeId={summaryQ.data?.shopDomain ?? ''}
       />
+
+      <Modal
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        title="Cancel your Growth subscription?"
+        primaryAction={{
+          content: 'Continue to Shopify',
+          destructive: true,
+          onAction: confirmCancel,
+          loading: cancelUrl.isLoading,
+          disabled: !cancelUrl.data?.url,
+        }}
+        secondaryActions={[{ content: 'Keep Growth', onAction: () => setCancelOpen(false) }]}
+      >
+        <Modal.Section>
+          <BlockStack gap="300">
+            <Text as="p">
+              Cancelling is completed on Shopify&rsquo;s plan page — switch to the Free plan there
+              and billing stops. We can&rsquo;t cancel it for you: Shopify owns the subscription
+              and only lets the merchant change it.
+            </Text>
+            <Text as="p" tone="subdued" variant="bodySm">
+              You&rsquo;ll go back to the top 5 gaps and lose revenue estimates, keyword fix
+              suggestions and the weekly digest.{' '}
+              <strong>Your historical data is kept</strong> — resubscribe any time and it&rsquo;s
+              all still there. Shopify issues a prorated credit for the unused part of your billing
+              cycle.
+            </Text>
+            {cancelUrl.isError && (
+              <Banner tone="critical">
+                Couldn&rsquo;t open the plan page: {cancelUrl.error?.message ?? 'unknown error'}
+              </Banner>
+            )}
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
     </Page>
   );
 }

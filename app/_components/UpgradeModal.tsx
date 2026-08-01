@@ -3,6 +3,7 @@
 import { Modal, BlockStack, Text, List, Banner, Spinner } from '@shopify/polaris';
 import { trpc } from '@/lib/trpc/client';
 import { analytics } from './analytics-client';
+import { redirectTop } from './redirect-top';
 
 interface Props {
   open: boolean;
@@ -27,19 +28,8 @@ export function UpgradeModal({ open, onClose, storeId }: Props): JSX.Element {
   const handleUpgrade = (): void => {
     analytics.track('upgrade_cta_clicked', { storeId });
     const url = planUrl.data?.url;
-    if (!url || typeof window === 'undefined') return;
-    // Must escape the embedded iframe: the plan page is on admin.shopify.com,
-    // so a same-frame navigation is blocked cross-origin.
-    const shopify = (
-      window as unknown as {
-        shopify?: { redirectTo?: (url: string, opts?: { target?: string }) => void };
-      }
-    ).shopify;
-    if (shopify?.redirectTo) {
-      shopify.redirectTo(url, { target: 'top' });
-    } else {
-      window.open(url, '_top');
-    }
+    if (!url) return;
+    redirectTop(url);
   };
 
   return (
