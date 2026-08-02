@@ -90,6 +90,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // (submitted/viewed) arrives first. If Redis is unavailable we fall back to
   // the legacy rule (count submits) so an infra blip never drops data.
   let countOccurrence: boolean;
+  let dedupeVia: 'redis' | 'fallback' = 'redis';
   try {
     // Scope the de-dupe to the shopper session when the tracker provides one,
     // so the same query from different shoppers within the window is NOT
@@ -99,9 +100,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       : `srch:dedup:${store.id}:${queryNormalized}`;
     const firstInWindow = await redis.set(dedupeKey, '1', 'EX', 10, 'NX');
     countOccurrence = firstInWindow !== null;
-  } catch {
+  } catch (err) {
+    // Redis unavailable: the ONLY reason a single shopper search inflates the
+    // count. Every hook (predictive, form submit, results page) reports the
+    // same search, and this fallback counts each 'search_submitted' among them
+    // separately. Log loudly — silently over-counting corrupts every downstream
+    // revenue estimate, which is worse than dropping the event.
+    dedupeVia = 'fallback';
     countOccurrence = event === 'search_submitted';
+    logger.error(
+      { shop, query: queryNormalized, err: (err as Error).message },
+      'search dedupe unavailable — occurrence counts may inflate',
+    );
   }
+
+  // Per-event trace of the dedupe decision. Without this an inflated
+  // occurrenceCount is undiagnosable: the totals look plausible and there is no
+  // record of how many events produced them.
+  logger.info(
+    { shop, query: queryNormalized, event, hasSid: Boolean(sid), countOccurrence, dedupeVia },
+    'search event received',
+  );
 
   try {
     await prisma.searchQuery.upsert({
