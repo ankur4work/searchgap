@@ -6,6 +6,8 @@ import { verifyOAuthHmac } from '@/lib/shopify/hmac';
 import { OAuthCallbackSchema, isValidShopDomain } from '@/lib/shopify/validators';
 import { upsertStoreWithToken, refreshStoreToken } from '@/lib/shopify/store';
 import { ensureTrackerScriptTag } from '@/lib/shopify/script-tag';
+import { fetchActiveSubscription, planFromSubscription } from '@/lib/shopify/billing';
+import { invalidate } from '@/lib/cache';
 import { exchangeOfflineAccessToken } from '@/lib/shopify/token-exchange';
 import { extractBearerToken, verifySessionToken } from '@/lib/shopify/session';
 // jobs/schedule imported dynamically — the transitive BullMQ Queue init
@@ -154,6 +156,45 @@ async function handleEmbeddedBootstrap(req: NextRequest): Promise<NextResponse> 
   if (isNewStore) {
     const { enqueueInstallBackfill } = await import('@/jobs/schedule');
     await enqueueInstallBackfill(store.id);
+  }
+
+  // Reconcile the billing plan against Shopify on every bootstrap.
+  //
+  // Store.plan is a local cache whose only other writer is the
+  // app_subscriptions/update webhook — and that webhook fires on CHANGE. A
+  // merchant who subscribed at some earlier point generates no new event, so
+  // any store row that starts life at the FREE default never learns it is on a
+  // paid plan: a restored/rebuilt database, a reinstall, or a single missed
+  // webhook delivery leaves a PAYING merchant locked to the free tier with no
+  // self-healing path. dashboard.summary reads this column directly, so the
+  // whole UI inherits the wrong answer.
+  //
+  // Shopify is authoritative; this is the one place every app open passes
+  // through, so reconciling here fixes the dashboard, the session plan and gap
+  // gating together. Best-effort: never block a login on a billing read.
+  try {
+    const sub = await fetchActiveSubscription(store);
+    const livePlan = planFromSubscription(sub);
+    if (livePlan !== store.plan) {
+      await prisma.store.update({
+        where: { id: store.id },
+        data: {
+          plan: livePlan,
+          shopifyChargeId: sub?.id ?? null,
+          ...(livePlan !== 'FREE' ? { graceEndsAt: null } : {}),
+        },
+      });
+      await invalidate(`dash:summary:v1:${store.id}`).catch(() => undefined);
+      logger.info(
+        { shop: claims.shop, cached: store.plan, live: livePlan, subName: sub?.name ?? null },
+        'bootstrap reconciled plan against Shopify',
+      );
+    }
+  } catch (err) {
+    logger.warn(
+      { shop: claims.shop, err: (err as Error).message },
+      'bootstrap could not reconcile plan — keeping cached value',
+    );
   }
 
   logger.info({ shop: claims.shop, storeId: store.id }, 'Embedded bootstrap complete');
