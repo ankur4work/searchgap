@@ -16,6 +16,23 @@ export const dynamic = 'force-dynamic';
  */
 const REALTIME_CLASSIFY_DEBOUNCE_MS = 8_000;
 
+/**
+ * Shopify's own internal lookups, which arrive on the same endpoints a shopper
+ * search uses. Themes fetch `/search?q=id:123 OR id:456` for product
+ * recommendations and predictive-search hydration; nobody typed that. Recorded
+ * as searches they become phantom gaps with revenue attached — a store with
+ * zero real traffic can show "gaps" purely from its own theme.
+ *
+ * Matched against the NORMALIZED query, where `id:123` has become `id 123`.
+ */
+const INTERNAL_QUERY = /\bid \d{6,}\b/;
+
+/**
+ * How long a shopper's in-progress query stays eligible to be superseded by a
+ * longer one they were still typing.
+ */
+const PREFIX_WINDOW_SEC = 60;
+
 const EventSchema = z.object({
   shop: ShopDomainSchema,
   event: z.enum(['search_submitted', 'search_viewed']),
@@ -66,6 +83,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const queryNormalized = normalizeQuery(query);
   if (!queryNormalized) {
+    return cors(new NextResponse(null, { status: 204 }));
+  }
+  if (INTERNAL_QUERY.test(queryNormalized)) {
+    // Drop silently: this is the theme talking to Shopify, not a shopper.
     return cors(new NextResponse(null, { status: 204 }));
   }
 
@@ -158,6 +179,57 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       'search event persist failed',
     );
     return cors(NextResponse.json({ error: 'write failed' }, { status: 500 }));
+  }
+
+  // Collapse in-progress typing.
+  //
+  // Predictive search fires on a pause, not only on submit, so a shopper typing
+  // "test products" with a hesitation mid-word lands BOTH "test pr" and
+  // "test products" as separate searches. The partial is not a query anyone
+  // meant — it inflates the search count and shows up as its own phantom gap,
+  // usually a zero-result one because half a word matches nothing.
+  //
+  // When the next query from the SAME shopper session extends the previous one,
+  // treat the previous as an artifact and give back its occurrence. Scoped to a
+  // session id so one shopper's typing can never cancel another's search, and
+  // to the same day bucket so the unique key still holds.
+  if (countOccurrence && sid) {
+    const lastKey = `srch:last:${store.id}:${sid}`;
+    try {
+      const previous = await redis.get(lastKey);
+      if (previous && previous !== queryNormalized && queryNormalized.startsWith(previous)) {
+        await prisma.searchQuery.updateMany({
+          where: {
+            storeId: store.id,
+            queryNormalized: previous,
+            dateBucket: bucket,
+            occurrenceCount: { gt: 0 },
+          },
+          data: { occurrenceCount: { decrement: 1 } },
+        });
+        // A partial that only ever existed as an artifact drops to zero — remove
+        // it rather than leave a phantom gap with no occurrences behind.
+        await prisma.searchQuery.deleteMany({
+          where: {
+            storeId: store.id,
+            queryNormalized: previous,
+            dateBucket: bucket,
+            occurrenceCount: { lte: 0 },
+          },
+        });
+        logger.info(
+          { shop, superseded: previous, by: queryNormalized },
+          'search event superseded an in-progress prefix',
+        );
+      }
+      await redis.set(lastKey, queryNormalized, 'EX', PREFIX_WINDOW_SEC);
+    } catch (err) {
+      // Non-fatal: worst case a partial query survives as its own row.
+      logger.warn(
+        { shop, err: (err as Error).message },
+        'prefix supersede check failed — partial queries may persist',
+      );
+    }
   }
 
   // Classify in near-real-time.
