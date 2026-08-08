@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { redis } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 import { ShopDomainSchema } from '@/lib/shopify/validators';
-import { normalizeQuery, dateBucketUTC } from '@/lib/ingestion/normalize';
+import { normalizeQuery, dateBucketUTC, isTypingArtifact } from '@/lib/ingestion/normalize';
+import { invalidateSummary } from '@/lib/cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,8 +31,15 @@ const INTERNAL_QUERY = /\bid \d{6,}\b/;
 /**
  * How long a shopper's in-progress query stays eligible to be superseded by a
  * longer one they were still typing.
+ *
+ * This is a TYPING window, not a browsing one. It was 60s, which is long enough
+ * to swallow deliberate consecutive searches: a merchant (or an App Store
+ * reviewer) trying "shirt", then "shirt blue", then "shirt blue xl" had the
+ * first two deleted and saw "Searches tracked: 1". Predictive search debounces
+ * in the low hundreds of milliseconds, so a real mid-word pause resolves in
+ * a few seconds at most.
  */
-const PREFIX_WINDOW_SEC = 60;
+const PREFIX_WINDOW_SEC = 5;
 
 const EventSchema = z.object({
   shop: ShopDomainSchema,
@@ -197,7 +205,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const lastKey = `srch:last:${store.id}:${sid}`;
     try {
       const previous = await redis.get(lastKey);
-      if (previous && previous !== queryNormalized && queryNormalized.startsWith(previous)) {
+      if (previous && isTypingArtifact(previous, queryNormalized)) {
         await prisma.searchQuery.updateMany({
           where: {
             storeId: store.id,
@@ -209,7 +217,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         });
         // A partial that only ever existed as an artifact drops to zero — remove
         // it rather than leave a phantom gap with no occurrences behind.
-        await prisma.searchQuery.deleteMany({
+        const removed = await prisma.searchQuery.deleteMany({
           where: {
             storeId: store.id,
             queryNormalized: previous,
@@ -217,8 +225,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             occurrenceCount: { lte: 0 },
           },
         });
+
+        // Remove the gap the partial already produced.
+        //
+        // The real-time classifier may have run between the two keystrokes and
+        // written a classification (plus revenue) for the partial. Deleting the
+        // search row alone left that behind: revenue attached to a search the
+        // dashboard no longer counts, which is precisely the cross-surface
+        // inconsistency Shopify rejected the app for. Only drop it once NO
+        // search row for that query remains in any day bucket — the same term
+        // may legitimately have been searched on its own earlier.
+        if (removed.count > 0) {
+          const stillSearched = await prisma.searchQuery.count({
+            where: { storeId: store.id, queryNormalized: previous },
+          });
+          if (stillSearched === 0) {
+            // RevenueEstimate rows cascade on delete.
+            await prisma.classification.deleteMany({
+              where: { storeId: store.id, queryNorm: previous },
+            });
+          }
+        }
+
         logger.info(
-          { shop, superseded: previous, by: queryNormalized },
+          { shop, superseded: previous, by: queryNormalized, removedSearchRows: removed.count },
           'search event superseded an in-progress prefix',
         );
       }
@@ -231,6 +261,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
   }
+
+  // The search count just moved, so the cached cards are stale.
+  //
+  // Only the classification job used to invalidate this, and it runs 8s later.
+  // Until then the "Searches over time" chart (uncached) showed the new search
+  // while the cards above it served a snapshot up to 60s old — the same data
+  // disagreeing with itself on one screen, including right after a reviewer
+  // clicks "Refresh data".
+  await invalidateSummary(store.id).catch(() => undefined);
 
   // Classify in near-real-time.
   //

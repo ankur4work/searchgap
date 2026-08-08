@@ -79,3 +79,22 @@ export function dateBucketUTC(d: Date): Date {
   );
   return bucket;
 }
+
+/**
+ * Is `next` the completion of a word the shopper was still typing in `prev`,
+ * rather than a new, deliberate search that happens to start with it?
+ *
+ * The distinction is the character that follows the prefix:
+ *   "test pr"  → "test products"   char is 'o'  — same word continuing → artifact
+ *   "shoes"    → "shoes red"       char is ' '  — a new word added     → deliberate
+ *
+ * Getting this wrong in the permissive direction destroys real shopper data,
+ * so anything that is not unambiguously mid-word is kept.
+ */
+export function isTypingArtifact(prev: string, next: string): boolean {
+  if (!prev || prev === next) return false;
+  if (!next.startsWith(prev)) return false;
+  // A completed word followed by more input is a refinement, not a keystroke.
+  if (prev.endsWith(' ')) return false;
+  return next.charAt(prev.length) !== ' ';
+}

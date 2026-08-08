@@ -72,8 +72,19 @@ function niceMax(value: number): number {
   return 10 * pow;
 }
 
-export function SearchTrendChart(): JSX.Element {
-  const [range, setRange] = useState('30');
+/**
+ * The range is owned by the dashboard page, not by this chart.
+ *
+ * When the chart kept its own state, switching it to 90 days left the headline
+ * cards on their hardcoded 30 — a "last 30 days" total sitting directly above a
+ * 90-day plot of the same metric. Lifting it means one window drives both.
+ */
+export interface SearchTrendChartProps {
+  range: string;
+  onRangeChange: (range: string) => void;
+}
+
+export function SearchTrendChart({ range, onRangeChange }: SearchTrendChartProps): JSX.Element {
   const [hover, setHover] = useState<number | null>(null);
   const clipId = useId();
 
@@ -124,7 +135,7 @@ export function SearchTrendChart(): JSX.Element {
               labelHidden
               options={RANGES}
               value={range}
-              onChange={setRange}
+              onChange={onRangeChange}
             />
           </div>
         </InlineStack>
@@ -157,11 +168,20 @@ export function SearchTrendChart(): JSX.Element {
           <div style={{ position: 'relative', width: '100%' }}>
             <svg
               viewBox={`0 0 ${W} ${H}`}
-              width="100%"
-              height="auto"
+              // `height` is a CSS property here, not an SVG presentation
+              // attribute: height="auto" is not a valid <length> and Chrome
+              // rejects it with "Expected length, 'auto'" on every render. The
+              // viewBox plus width:100% already scales the plot fluidly, and
+              // aspect-ratio preserves its proportions.
               role="img"
               aria-label={`Searches over the last ${range} days. ${trend.data?.totalSearches ?? 0} searches total, ${trend.data?.totalGaps ?? 0} of which hit a gap.`}
-              style={{ display: 'block', overflow: 'visible' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: 'auto',
+                aspectRatio: `${W} / ${H}`,
+                overflow: 'visible',
+              }}
               onMouseLeave={() => setHover(null)}
               onMouseMove={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();

@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { protectedProcedure, router } from '../trpc';
-import { invalidate as invalidateCache } from '@/lib/cache';
+import { invalidateSummary } from '@/lib/cache';
 import { clearStoreMutexes } from '@/lib/ingestion/mutex';
 
 export const ingestionRouter = router({
@@ -21,7 +21,7 @@ export const ingestionRouter = router({
     // Bust the cached dashboard summary so the next refresh shows a fresh
     // `lastSyncedAt` timestamp the moment the worker stamps it (instead of up
     // to 60s of staleness from the read-through cache).
-    await invalidateCache(`dash:summary:v1:${storeId}`).catch(() => undefined);
+    await invalidateSummary(storeId).catch(() => undefined);
 
     return { ok: true, storeId };
   }),

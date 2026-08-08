@@ -8,7 +8,7 @@ import { classify, type AggregatedQuery, type ProductRef, type SemanticMatchRef 
 import { estimateRevenue } from './revenue';
 import { engineConfig } from './config';
 import { detectCategory } from './category';
-import { invalidate } from '../cache';
+import { invalidateSummary } from '../cache';
 
 const redisPub = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null, lazyConnect: true });
 const CLASSIFICATION_COMPLETE_CHANNEL = 'classification.complete';
@@ -223,7 +223,7 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
   };
 
   // Classification changed the dashboard numbers — bust the per-store cache.
-  await invalidate(`dash:summary:v1:${store.id}`);
+  await invalidateSummary(store.id);
 
   // Occurrence distribution and the AOV basis, so an implausible headline
   // figure can be diagnosed from logs alone. Revenue is

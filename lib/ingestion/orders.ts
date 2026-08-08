@@ -53,9 +53,27 @@ export interface OrdersIngestionResult {
   insufficientData: boolean;
 }
 
+/**
+ * Order lookback, in days.
+ *
+ * Capped at 60 deliberately. The app requests `read_orders`, which Shopify
+ * limits to orders from the last 60 days — asking for 90 did not return 90, it
+ * silently returned 60 while the code believed it had a full quarter. On a
+ * store whose orders were mostly older than that, fewer than
+ * MIN_ORDERS_FOR_AOV survived, `aovCents` came back null, and every revenue
+ * figure fell through to the generic category AOV. That is how a store with 48
+ * visible orders in the Shopify admin produced a "Revenue at risk" built on a
+ * $60 industry default.
+ *
+ * Reading further back requires the `read_all_orders` scope, which needs
+ * Shopify's approval; until then the honest window is 60 days and the UI
+ * badges the estimate when real AOV is unavailable.
+ */
+export const ORDER_WINDOW_DAYS = 60;
+
 export async function ingestOrders(
   store: Store,
-  opts: { windowDays: number; runId?: string } = { windowDays: 90 },
+  opts: { windowDays: number; runId?: string } = { windowDays: ORDER_WINDOW_DAYS },
 ): Promise<OrdersIngestionResult> {
   const client = new ShopifyClient(store);
   const since = new Date(Date.now() - opts.windowDays * 86_400_000).toISOString();

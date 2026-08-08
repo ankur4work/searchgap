@@ -3,12 +3,23 @@ import { TRPCError } from '@trpc/server';
 import type { ClassificationType, PrismaClient } from '@prisma/client';
 import { protectedProcedure, router, FREE_PLAN_VISIBLE_GAPS } from '../trpc';
 import { bucketForEstimate } from '@/lib/money';
-import { getOrCompute } from '@/lib/cache';
+import { getOrCompute, summaryCacheKey } from '@/lib/cache';
 import { env } from '@/lib/env';
 import { decrypt } from '@/lib/crypto';
 import { ADMIN_API_VERSION } from '@/lib/shopify/client';
 
 const TypeFilterSchema = z.enum(['ALL', 'TYPE_1', 'TYPE_2', 'TYPE_3', 'TYPE_4']);
+
+/**
+ * The reporting window, shared by `summary` and `searchTrend`. Both procedures
+ * MUST accept the same range: the cards previously hardcoded 30 days while the
+ * chart offered 7–90, so selecting any other range put a "last 30 days" total
+ * next to a 90-day plot and the two read as unsynchronized data.
+ */
+export const DEFAULT_WINDOW_DAYS = 30;
+const WindowSchema = z
+  .object({ days: z.number().int().min(7).max(90).default(DEFAULT_WINDOW_DAYS) })
+  .optional();
 
 function latestDate(dates: Array<Date | null | undefined>): Date | null {
   let latest: Date | null = null;
@@ -20,15 +31,24 @@ function latestDate(dates: Array<Date | null | undefined>): Date | null {
 }
 
 export const dashboardRouter = router({
-  summary: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session.storeId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No store in session' });
-    const storeId = ctx.session.storeId;
-    // Redis read-through cache — 60s by default. Cache key is per-store.
-    const cacheKey = `dash:summary:v1:${storeId}`;
-    return getOrCompute(cacheKey, env.DASHBOARD_SUMMARY_CACHE_TTL_SEC, () =>
-      computeSummary(ctx.prisma, storeId),
-    );
-  }),
+  /**
+   * Headline cards. Takes the SAME `days` window as `searchTrend` so the two
+   * can never disagree: a reviewer switching the chart to 90 days moves the
+   * cards with it.
+   *
+   * Every figure here is derived from one windowed population — see
+   * `computeSummary`.
+   */
+  summary: protectedProcedure
+    .input(WindowSchema)
+    .query(async ({ ctx, input }) => {
+      if (!ctx.session.storeId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No store in session' });
+      const storeId = ctx.session.storeId;
+      const days = input?.days ?? DEFAULT_WINDOW_DAYS;
+      return getOrCompute(summaryCacheKey(storeId, days), env.DASHBOARD_SUMMARY_CACHE_TTL_SEC, () =>
+        computeSummary(ctx.prisma, storeId, days),
+      );
+    }),
 
   /**
    * Daily search + gap volume for the trend chart.
@@ -43,12 +63,12 @@ export const dashboardRouter = router({
    * would also make the line lie by connecting across the missing days.
    */
   searchTrend: protectedProcedure
-    .input(z.object({ days: z.number().int().min(7).max(90).default(30) }).optional())
+    .input(WindowSchema)
     .query(async ({ ctx, input }) => {
       if (!ctx.session.storeId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No store in session' });
       }
-      const days = input?.days ?? 30;
+      const days = input?.days ?? DEFAULT_WINDOW_DAYS;
       const storeId = ctx.session.storeId;
       const since = new Date(Date.now() - days * 86_400_000);
 
@@ -318,11 +338,101 @@ export const dashboardRouter = router({
   }),
 });
 
+/**
+ * One windowed population, every card derived from it.
+ *
+ * Shopify rejected the app under 2.1.4 because these cards contradicted each
+ * other: "searches tracked" filtered `search_queries` to the last 30 days,
+ * while "gaps identified" and "revenue at risk" summed `classifications` and
+ * `revenue_estimates` filtered by store ONLY. Three cards on one row counted
+ * three different time ranges, so the dashboard could show more gaps than
+ * searches, and revenue that no search in the window justified. Pruning aged
+ * rows in the classification job narrowed the drift but could not remove it —
+ * between runs the tables genuinely disagree.
+ *
+ * So the window is applied at READ time, in SQL, from a single CTE:
+ *   - `windowed` is the authoritative set — queries with searches in range.
+ *   - gaps and revenue are LEFT JOINed onto it, so a classification can only
+ *     count if a search in the window justifies it.
+ * Correctness no longer depends on a background job having run recently.
+ *
+ * `revenue_estimates` is joined via a LATERAL taking only the newest row per
+ * classification. The pipeline replaces estimates idempotently, so today there
+ * is at most one — the LATERAL means a duplicate could never silently double
+ * the headline figure.
+ */
+interface WindowedTotals {
+  total_searches: number;
+  type_1: number;
+  type_2: number;
+  type_3: number;
+  type_4: number;
+  revenue_cents: number;
+  band_low_cents: number;
+  band_high_cents: number;
+  last_classified_at: Date | null;
+}
+
+async function computeWindowedTotals(
+  prisma: PrismaClient,
+  storeId: string,
+  since: Date,
+): Promise<WindowedTotals> {
+  const rows = await prisma.$queryRaw<WindowedTotals[]>`
+    WITH windowed AS (
+      SELECT sq.query_normalized AS q,
+             SUM(sq.occurrence_count)::int AS occurrences
+      FROM search_queries sq
+      WHERE sq.store_id = ${storeId}
+        AND sq.occurred_at >= ${since}
+      GROUP BY sq.query_normalized
+    )
+    SELECT
+      COALESCE(SUM(w.occurrences), 0)::int                                  AS total_searches,
+      COUNT(c.id) FILTER (WHERE c.type = 'TYPE_1')::int                     AS type_1,
+      COUNT(c.id) FILTER (WHERE c.type = 'TYPE_2')::int                     AS type_2,
+      COUNT(c.id) FILTER (WHERE c.type = 'TYPE_3')::int                     AS type_3,
+      COUNT(c.id) FILTER (WHERE c.type = 'TYPE_4')::int                     AS type_4,
+      COALESCE(SUM(re.estimate_cents), 0)::int                              AS revenue_cents,
+      COALESCE(SUM(re.band_low_cents), 0)::int                              AS band_low_cents,
+      COALESCE(SUM(re.band_high_cents), 0)::int                             AS band_high_cents,
+      MAX(c.created_at)                                                     AS last_classified_at
+    FROM windowed w
+    LEFT JOIN classifications c
+      ON c.store_id = ${storeId}
+     AND c.query_norm = w.q
+    LEFT JOIN LATERAL (
+      SELECT r.estimate_cents, r.band_low_cents, r.band_high_cents
+      FROM revenue_estimates r
+      WHERE r.classification_id = c.id
+      ORDER BY r.created_at DESC
+      LIMIT 1
+    ) re ON TRUE
+  `;
+
+  return (
+    rows[0] ?? {
+      total_searches: 0,
+      type_1: 0,
+      type_2: 0,
+      type_3: 0,
+      type_4: 0,
+      revenue_cents: 0,
+      band_low_cents: 0,
+      band_high_cents: 0,
+      last_classified_at: null,
+    }
+  );
+}
+
 async function computeSummary(
   prisma: PrismaClient,
   storeId: string,
-): Promise<ReturnType<typeof emptySummary>> {
-  const [store, agg, counts, latest, searchVolume30, topGap] = await Promise.all([
+  days: number = DEFAULT_WINDOW_DAYS,
+): Promise<DashboardSummary> {
+  const since = new Date(Date.now() - days * 86_400_000);
+
+  const [store, totals, topGap] = await Promise.all([
     prisma.store.findUnique({
       where: { id: storeId },
       select: {
@@ -339,43 +449,40 @@ async function computeSummary(
         firstDashboardViewAt: true,
       },
     }),
-    prisma.revenueEstimate.aggregate({
-      _sum: { estimateCents: true, bandLowCents: true, bandHighCents: true },
-      where: { classification: { storeId } },
-    }),
-    prisma.classification.groupBy({
-      by: ['type'],
-      where: { storeId },
-      _count: { _all: true },
-    }),
-    prisma.classification.aggregate({
-      _max: { createdAt: true },
-      where: { storeId },
-    }),
-    prisma.searchQuery.aggregate({
-      _sum: { occurrenceCount: true },
+    computeWindowedTotals(prisma, storeId, since),
+    // The headline gap must also be inside the window — otherwise the card
+    // could name a query nothing in the current range accounts for.
+    prisma.classification.findFirst({
       where: {
         storeId,
-        occurredAt: { gte: new Date(Date.now() - 30 * 86_400_000) },
+        lowVolume: false,
+        type: { not: 'UNCAT' },
+        queryNorm: {
+          in: (
+            await prisma.searchQuery.findMany({
+              where: { storeId, occurredAt: { gte: since } },
+              select: { queryNormalized: true },
+              distinct: ['queryNormalized'],
+              take: 1000,
+            })
+          ).map((r) => r.queryNormalized),
+        },
       },
-    }),
-    prisma.classification.findFirst({
-      where: { storeId, lowVolume: false, type: { not: 'UNCAT' } },
       orderBy: [{ occurrenceCount: 'desc' }],
-      include: { revenueEstimates: true },
+      include: { revenueEstimates: { orderBy: { createdAt: 'desc' }, take: 1 } },
     }),
   ]);
 
   const countsByType: Record<ClassificationType, number> = {
-    TYPE_1: 0,
-    TYPE_2: 0,
-    TYPE_3: 0,
-    TYPE_4: 0,
+    TYPE_1: totals.type_1,
+    TYPE_2: totals.type_2,
+    TYPE_3: totals.type_3,
+    TYPE_4: totals.type_4,
     UNCAT: 0,
   };
-  for (const c of counts) countsByType[c.type] = c._count._all;
 
   return {
+    windowDays: days,
     storeName: store?.shopDomain.replace(/\.myshopify\.com$/, '') ?? 'Store',
     shopDomain: store?.shopDomain ?? '',
     plan: store?.plan ?? 'FREE',
@@ -390,9 +497,9 @@ async function computeSummary(
       store?.lastOrderSync,
     ]),
     firstDashboardViewAt: store?.firstDashboardViewAt ?? null,
-    revenueImpactCents: agg._sum.estimateCents ?? 0,
-    bandLowCents: agg._sum.bandLowCents ?? 0,
-    bandHighCents: agg._sum.bandHighCents ?? 0,
+    revenueImpactCents: totals.revenue_cents,
+    bandLowCents: totals.band_low_cents,
+    bandHighCents: totals.band_high_cents,
     countsByType: {
       TYPE_1: countsByType.TYPE_1,
       TYPE_2: countsByType.TYPE_2,
@@ -402,7 +509,7 @@ async function computeSummary(
     productGaps: countsByType.TYPE_1,
     keywordFixes: countsByType.TYPE_2,
     resultsNoClick: countsByType.TYPE_3,
-    totalMonthlySearches: searchVolume30._sum.occurrenceCount ?? 0,
+    totalMonthlySearches: totals.total_searches,
     totalClassifications:
       countsByType.TYPE_1 + countsByType.TYPE_2 + countsByType.TYPE_3 + countsByType.TYPE_4,
     topQuery: topGap
@@ -411,11 +518,20 @@ async function computeSummary(
           estimateCents: topGap.revenueEstimates[0]?.estimateCents ?? 0,
         }
       : null,
-    lastUpdatedAt: latest._max.createdAt,
+    lastUpdatedAt: totals.last_classified_at,
   };
 }
 
-function emptySummary(): {
+/**
+ * Shape of the dashboard summary payload.
+ *
+ * Was a never-called `emptySummary()` factory that existed only so
+ * `ReturnType<typeof emptySummary>` could name this shape — an interface says
+ * the same thing without the dead runtime function lint was flagging.
+ */
+export interface DashboardSummary {
+  /** Reporting window these figures cover. Echoed so the UI can label them. */
+  windowDays: number;
   storeName: string;
   shopDomain: string;
   plan: 'FREE' | 'GROWTH' | 'PRO';
@@ -437,28 +553,4 @@ function emptySummary(): {
   totalClassifications: number;
   topQuery: { query: string; estimateCents: number } | null;
   lastUpdatedAt: Date | null;
-} {
-  return {
-    storeName: 'Store',
-    shopDomain: '',
-    plan: 'FREE',
-    currency: 'USD',
-    industry: null,
-    category: 'DEFAULT',
-    aovCents: null,
-    insufficientAov: false,
-    lastSyncedAt: null,
-    firstDashboardViewAt: null,
-    revenueImpactCents: 0,
-    bandLowCents: 0,
-    bandHighCents: 0,
-    countsByType: { TYPE_1: 0, TYPE_2: 0, TYPE_3: 0, TYPE_4: 0 },
-    productGaps: 0,
-    keywordFixes: 0,
-    resultsNoClick: 0,
-    totalMonthlySearches: 0,
-    totalClassifications: 0,
-    topQuery: null,
-    lastUpdatedAt: null,
-  };
 }

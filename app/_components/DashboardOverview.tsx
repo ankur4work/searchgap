@@ -173,6 +173,14 @@ interface Props {
   totalGaps: number;
   revenueImpactCents: number;
   currency: string;
+  /** Reporting window in days — shared with the trend chart below the cards. */
+  windowDays: number;
+  /**
+   * True when the store has too few recent orders to compute a real AOV, so
+   * revenue rests on a category-typical figure rather than this store's own
+   * economics. The card must say so instead of printing a confident total.
+   */
+  estimatedAov: boolean;
   syncReady: boolean;
   syncJobs: SyncJob[];
   hasError: boolean;
@@ -188,6 +196,8 @@ export function DashboardOverview({
   totalGaps,
   revenueImpactCents,
   currency,
+  windowDays,
+  estimatedAov,
   syncReady,
   syncJobs,
   hasError,
@@ -340,13 +350,17 @@ export function DashboardOverview({
         <StatCard
           label="Searches tracked"
           value={totalQueries.toLocaleString()}
-          hint={syncReady ? 'Tracked automatically · last 30 days' : 'Collecting…'}
+          hint={syncReady ? `Tracked automatically · last ${windowDays} days` : 'Collecting…'}
           accent={queriesAccent}
         />
         <StatCard
-          label="Revenue at risk"
+          label={estimatedAov ? 'Revenue at risk (estimated)' : 'Revenue at risk'}
           value={revenueImpactCents > 0 ? formatMoney(revenueImpactCents) : '—'}
-          hint={`${totalGaps} gaps identified`}
+          hint={
+            estimatedAov
+              ? `${totalGaps} gaps · based on a typical AOV for your category, not your orders`
+              : `${totalGaps} gaps identified · last ${windowDays} days`
+          }
           accent={revenueAccent}
         />
       </div>

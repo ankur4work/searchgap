@@ -7,7 +7,7 @@ import { OAuthCallbackSchema, isValidShopDomain } from '@/lib/shopify/validators
 import { upsertStoreWithToken, refreshStoreToken } from '@/lib/shopify/store';
 import { ensureTrackerScriptTag } from '@/lib/shopify/script-tag';
 import { fetchActiveSubscription, planFromSubscription } from '@/lib/shopify/billing';
-import { invalidate } from '@/lib/cache';
+import { invalidateSummary } from '@/lib/cache';
 import { exchangeOfflineAccessToken } from '@/lib/shopify/token-exchange';
 import { extractBearerToken, verifySessionToken } from '@/lib/shopify/session';
 // jobs/schedule imported dynamically — the transitive BullMQ Queue init
@@ -184,7 +184,7 @@ async function handleEmbeddedBootstrap(req: NextRequest): Promise<NextResponse> 
           ...(livePlan !== 'FREE' ? { graceEndsAt: null } : {}),
         },
       });
-      await invalidate(`dash:summary:v1:${store.id}`).catch(() => undefined);
+      await invalidateSummary(store.id).catch(() => undefined);
       logger.info(
         { shop: claims.shop, cached: store.plan, live: livePlan, subName: sub?.name ?? null },
         'bootstrap reconciled plan against Shopify',

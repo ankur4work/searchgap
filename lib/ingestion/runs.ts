@@ -1,6 +1,6 @@
 import type { IngestionJobType, IngestionRun, IngestionStatus } from '@prisma/client';
 import { prisma } from '../prisma';
-import { invalidate } from '../cache';
+import { invalidateSummary } from '../cache';
 import { track } from '../analytics';
 import { logger } from '../logger';
 
@@ -68,7 +68,7 @@ export async function finishRun(
     if (allDone) {
       // Bust the dashboard summary Redis cache so the next tRPC refetch sees
       // fresh gap counts rather than data cached before the sync ran.
-      await invalidate(`dash:summary:v1:${run.storeId}`).catch(() => undefined);
+      await invalidateSummary(run.storeId).catch(() => undefined);
 
       const store = await prisma.store.findUnique({
         where: { id: run.storeId },

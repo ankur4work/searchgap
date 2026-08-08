@@ -27,6 +27,9 @@ export default function DashboardPage(): JSX.Element {
   // a bit after completion so we catch the classify job finishing (~30-60s later).
   const [syncCompletedAt, setSyncCompletedAt] = useState<number | null>(null);
   const [syncInitiatedAt, setSyncInitiatedAt] = useState<number | null>(null);
+  // One reporting window for the whole screen — the cards and the trend chart
+  // must never describe different date ranges.
+  const [range, setRange] = useState('30');
 
   const onboarding = trpc.onboarding.status.useQuery(undefined, {
     enabled: auth.ready,
@@ -38,7 +41,7 @@ export default function DashboardPage(): JSX.Element {
       return false;
     },
   });
-  const summary = trpc.dashboard.summary.useQuery(undefined, {
+  const summary = trpc.dashboard.summary.useQuery({ days: Number(range) }, {
     enabled: auth.ready,
     refetchOnWindowFocus: false,
     refetchInterval: () => {
@@ -128,6 +131,8 @@ export default function DashboardPage(): JSX.Element {
           totalGaps={s.totalClassifications}
           revenueImpactCents={s.revenueImpactCents}
           currency={s.currency}
+          windowDays={s.windowDays}
+          estimatedAov={s.aovCents == null || s.insufficientAov}
           syncReady={ingestionReady}
           syncJobs={ingestJobs}
           hasError={ingestHasError}
@@ -146,7 +151,9 @@ export default function DashboardPage(): JSX.Element {
         {/* Deliberately NOT gated behind hasGaps: the trend is most reassuring
             exactly when the gap list is empty, because it shows tracking is
             alive. Hiding it then would make a working install look dead. */}
-        {!isWaitingForFirstSearch && <SearchTrendChart />}
+        {!isWaitingForFirstSearch && (
+          <SearchTrendChart range={range} onRangeChange={setRange} />
+        )}
 
         {showInsufficient && <InsufficientDataEmpty />}
         {showNoGaps && <NoGapsFoundEmpty />}

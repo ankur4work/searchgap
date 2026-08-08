@@ -59,7 +59,7 @@ export async function createContext(opts: { req: NextRequest }): Promise<Context
   if (token) {
     try {
       const claims = await verifySessionToken(token);
-      let store = await prisma.store.findUnique({
+      const store = await prisma.store.findUnique({
         where: { shopDomain: claims.shop },
         select: { id: true, uninstalledAt: true, plan: true },
       });

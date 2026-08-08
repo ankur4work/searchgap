@@ -33,3 +33,26 @@ export async function invalidate(keyOrPattern: string): Promise<void> {
     await redis.del(keyOrPattern);
   }
 }
+
+/**
+ * Dashboard summary cache key. Versioned (`v2`) because the summary is now
+ * windowed and takes the window length as a parameter — a `v1` entry holds
+ * all-time totals under a key that no longer means the same thing.
+ *
+ * The window is part of the key: the same store viewed at 7 and 90 days are
+ * different answers, and collapsing them into one entry is how the cards came
+ * to disagree with the chart above them.
+ */
+export function summaryCacheKey(storeId: string, days: number): string {
+  return `dash:summary:v2:${storeId}:${days}`;
+}
+
+/**
+ * Drop every cached window for a store. Call this after ANY write that moves
+ * the dashboard numbers — a search event, a classification run, an ingest.
+ * Invalidating a single key would leave the other windows stale, which is
+ * indistinguishable from the app failing to sync.
+ */
+export async function invalidateSummary(storeId: string): Promise<void> {
+  await invalidate(`dash:summary:v2:${storeId}:*`);
+}

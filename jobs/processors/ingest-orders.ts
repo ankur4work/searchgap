@@ -1,7 +1,7 @@
 import type { Job } from 'bullmq';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { ingestOrders } from '@/lib/ingestion/orders';
+import { ingestOrders, ORDER_WINDOW_DAYS } from '@/lib/ingestion/orders';
 import { acquireStoreMutex } from '@/lib/ingestion/mutex';
 import { startRun, finishRun } from '@/lib/ingestion/runs';
 import { ShopifyAuthError } from '@/lib/shopify/client';
@@ -12,7 +12,7 @@ import { ingestionQueue } from '../queue';
 const AUTH_RETRY_DELAY_MS = 5 * 60 * 1000;
 
 export async function ingestOrdersProcessor(job: Job<IngestionJobData>): Promise<void> {
-  const { storeId, sinceDays = 60 } = job.data;
+  const { storeId, sinceDays = ORDER_WINDOW_DAYS } = job.data;
   const mutex = await acquireStoreMutex(storeId, 600, 'orders');
   if (!mutex) {
     logger.info({ storeId, jobId: job.id }, 'Store locked — re-enqueueing orders sync');
