@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { ShopDomainSchema } from '@/lib/shopify/validators';
 import { normalizeQuery, dateBucketUTC, isTypingArtifact } from '@/lib/ingestion/normalize';
 import { invalidateSummary } from '@/lib/cache';
+import { countOnceInProcess } from '@/lib/ingestion/fallback-dedupe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -116,30 +117,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // the occurrence count server-side: the FIRST event for a (store, query)
   // within a short window counts once; later same-query events only refresh
   // resultCount. Keyed on a Redis SET NX so it works regardless of which event
-  // (submitted/viewed) arrives first. If Redis is unavailable we fall back to
-  // the legacy rule (count submits) so an infra blip never drops data.
+  // (submitted/viewed) arrives first. If Redis is unavailable an in-process
+  // dedupe takes over with the same key and window, so an infra blip neither
+  // drops data nor inflates it.
+  //
+  // Scope the de-dupe to the shopper session when the tracker provides one, so
+  // the same query from different shoppers within the window is NOT merged.
+  // Cached trackers without a session id fall back to (store, query).
+  const dedupeKey = sid
+    ? `srch:dedup:${store.id}:${queryNormalized}:${sid}`
+    : `srch:dedup:${store.id}:${queryNormalized}`;
   let countOccurrence: boolean;
   let dedupeVia: 'redis' | 'fallback' = 'redis';
   try {
-    // Scope the de-dupe to the shopper session when the tracker provides one,
-    // so the same query from different shoppers within the window is NOT
-    // merged. Cached trackers without a session id fall back to (store, query).
-    const dedupeKey = sid
-      ? `srch:dedup:${store.id}:${queryNormalized}:${sid}`
-      : `srch:dedup:${store.id}:${queryNormalized}`;
     const firstInWindow = await redis.set(dedupeKey, '1', 'EX', 10, 'NX');
     countOccurrence = firstInWindow !== null;
   } catch (err) {
-    // Redis unavailable: the ONLY reason a single shopper search inflates the
-    // count. Every hook (predictive, form submit, results page) reports the
-    // same search, and this fallback counts each 'search_submitted' among them
-    // separately. Log loudly — silently over-counting corrupts every downstream
-    // revenue estimate, which is worse than dropping the event.
+    // Redis unavailable. This used to count every 'search_submitted', but TWO
+    // of the three events one search fires carry that name (predictive fetch
+    // and form submit), so an outage silently DOUBLED every occurrence — and
+    // occurrences multiply straight into the revenue estimate. Inflated totals
+    // that look plausible are worse than missing ones, and over-counting is
+    // precisely what Shopify cites under 2.1.4.
+    //
+    // Fall back to an in-process dedupe with the same key and window as Redis,
+    // so the first event still counts once and the rest are suppressed. It is
+    // per-container and therefore approximate across replicas, which is why
+    // this still logs at error: Redis being down is the thing to fix.
     dedupeVia = 'fallback';
-    countOccurrence = event === 'search_submitted';
+    countOccurrence = countOnceInProcess(dedupeKey);
     logger.error(
-      { shop, query: queryNormalized, err: (err as Error).message },
-      'search dedupe unavailable — occurrence counts may inflate',
+      { shop, query: queryNormalized, event, countOccurrence, err: (err as Error).message },
+      'search dedupe unavailable — using in-process fallback',
     );
   }
 
