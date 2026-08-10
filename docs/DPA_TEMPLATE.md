@@ -1,8 +1,12 @@
-# Data Processing Addendum (template)
+# Data Processing Addendum
 
-_This is a template. Actual DPAs between GapFinder (the "Processor")
-and the Customer (the "Controller") are prepared from this boilerplate on
-request. Not legal advice. Review with counsel before use._
+_These terms are **already in force for every merchant**: they are published in
+the "Data processing terms" section of the privacy policy (`/privacy`) and take
+effect on install, with no signature or request required. This document is the
+long-form, countersignable version for merchants whose procurement process
+needs an executed copy — it must not diverge from `/privacy`._
+
+_Not legal advice. Review with counsel before use._
 
 ## 1. Subject matter
 

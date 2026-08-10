@@ -9,7 +9,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const UPDATED = '25 June 2026';
+const UPDATED = '10 August 2026';
 
 const STORED: Array<[string, string, string]> = [
   ['Shop domain', 'Identify your store', 'Install + 30 days'],
@@ -166,6 +166,64 @@ export default function PrivacyPage(): JSX.Element {
             </li>
           </ul>
 
+          <h2 style={sectionTitle}>Data processing terms</h2>
+          <p style={para}>
+            These terms form our Data Processing Agreement and apply automatically to every
+            merchant from the moment you install {BRAND.name}. No separate signature or request is
+            needed. Where you are subject to the GDPR, UK GDPR or a comparable regime, you are the{' '}
+            <strong>controller</strong> and we are the <strong>processor</strong>.
+          </p>
+          <ul style={{ paddingLeft: 20, margin: 0 }}>
+            <li style={li}>
+              <strong>Subject matter and duration</strong> — our processing of personal data on your
+              behalf in connection with {BRAND.name}, for the life of your install plus the
+              retention periods above.
+            </li>
+            <li style={li}>
+              <strong>Nature and purpose</strong> — analysing shopper search queries on your
+              storefront, computing product-gap classifications and revenue estimates, sending the
+              weekly digest to your nominated address, and error monitoring.
+            </li>
+            <li style={li}>
+              <strong>Types of personal data</strong> — your business contact details (shop domain,
+              merchant email) and your encrypted Shopify access token. We process{' '}
+              <strong>no personal data of your shoppers</strong>: we store no customer ID, name,
+              email, address or IP, and search terms are stored without any identifier linking them
+              to a person.
+            </li>
+            <li style={li}>
+              <strong>Categories of data subjects</strong> — you, the shop owner or operator. No
+              end-consumer data subjects are in scope.
+            </li>
+            <li style={li}>
+              <strong>Our obligations</strong> — we process personal data only on your documented
+              instructions; keep everyone with access under a duty of confidentiality; maintain the
+              technical and organisational measures required by Article 32 GDPR; assist you with
+              data-subject requests and with Articles 32&ndash;36; and delete or return personal
+              data when the service ends.
+            </li>
+            <li style={li}>
+              <strong>Sub-processors</strong> — you authorise the sub-processors listed above. We
+              will give you at least 30 days&rsquo; notice before adding or replacing one, and you
+              may object on reasonable grounds.
+            </li>
+            <li style={li}>
+              <strong>International transfers</strong> — transfers outside your region are governed
+              by the Standard Contractual Clauses adopted by the European Commission, incorporated
+              here by reference.
+            </li>
+            <li style={li}>
+              <strong>Security incidents</strong> — we will notify you without undue delay, and no
+              later than 72 hours, after becoming aware of a personal data breach, including its
+              nature, likely consequences, and the steps we have taken to mitigate it.
+            </li>
+            <li style={li}>
+              <strong>Audit</strong> — on reasonable notice we will make available the information
+              necessary to demonstrate compliance with these terms, and allow an audit by you or an
+              auditor you nominate.
+            </li>
+          </ul>
+
           <h2 style={sectionTitle}>Your rights</h2>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             <li style={li}>
@@ -176,7 +234,9 @@ export default function PrivacyPage(): JSX.Element {
               request.
             </li>
             <li style={li}>
-              <strong>Data Processing Addendum</strong> — available on request
+              <strong>Data Processing Agreement</strong> — already in force. The Data processing
+              terms above apply to every merchant on install, so there is nothing to request or
+              sign. A countersigned copy is available on request
               {env.DPA_URL ? <> at {env.DPA_URL}</> : null}.
             </li>
           </ul>
