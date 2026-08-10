@@ -152,11 +152,19 @@ export const dashboardRouter = router({
         }),
       ]);
 
+      // Rank by how often shoppers searched it, THEN by revenue.
+      //
+      // Revenue used to lead. Since revenue is occurrences x AOV x benchmark and
+      // the last two are constant per store, the two orders normally agree — but
+      // when every gap has been searched once they all tie on revenue and fall
+      // through to the alphabetical tiebreak, so the list reads as if it isn't
+      // ranked at all. Occurrences are also what the column actually shows, so
+      // leading with them makes the ordering self-evident.
       rows.sort((a, b) => {
+        if (b.occurrenceCount !== a.occurrenceCount) return b.occurrenceCount - a.occurrenceCount;
         const av = a.revenueEstimates[0]?.estimateCents ?? 0;
         const bv = b.revenueEstimates[0]?.estimateCents ?? 0;
         if (bv !== av) return bv - av;
-        if (b.occurrenceCount !== a.occurrenceCount) return b.occurrenceCount - a.occurrenceCount;
         return a.queryNorm.localeCompare(b.queryNorm);
       });
       const paged = rows.slice(0, input.limit);

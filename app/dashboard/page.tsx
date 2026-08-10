@@ -41,15 +41,20 @@ export default function DashboardPage(): JSX.Element {
       return false;
     },
   });
+  // ONE polling rule for every surface that reads the same numbers. The cards
+  // and the trend chart must never refresh on different schedules — that is how
+  // the card reached 20 searches while the plot below it still showed 17.
+  const pollMs = (): number | false => {
+    if (onboarding.data?.ready === false) return 3000;
+    // Keep polling for 2 minutes after sync completes to catch classify.
+    if (syncCompletedAt !== null && Date.now() - syncCompletedAt < 2 * 60 * 1000) return 8000;
+    return false;
+  };
+
   const summary = trpc.dashboard.summary.useQuery({ days: Number(range) }, {
     enabled: auth.ready,
     refetchOnWindowFocus: false,
-    refetchInterval: () => {
-      if (onboarding.data?.ready === false) return 3000;
-      // Keep polling for 2 minutes after sync completes to catch classify.
-      if (syncCompletedAt !== null && Date.now() - syncCompletedAt < 2 * 60 * 1000) return 8000;
-      return false;
-    },
+    refetchInterval: pollMs,
   });
 
   // When onboarding flips from in-progress → ready, record the time and
@@ -61,6 +66,7 @@ export default function DashboardPage(): JSX.Element {
       setSyncCompletedAt(Date.now());
       void utils.dashboard.summary.invalidate();
       void utils.dashboard.gaps.invalidate();
+      void utils.dashboard.searchTrend.invalidate();
     }
     prevReady.current = ready;
   }, [onboarding.data?.ready, utils]);
@@ -152,7 +158,11 @@ export default function DashboardPage(): JSX.Element {
             exactly when the gap list is empty, because it shows tracking is
             alive. Hiding it then would make a working install look dead. */}
         {!isWaitingForFirstSearch && (
-          <SearchTrendChart range={range} onRangeChange={setRange} />
+          <SearchTrendChart
+            range={range}
+            onRangeChange={setRange}
+            refetchInterval={pollMs()}
+          />
         )}
 
         {showInsufficient && <InsufficientDataEmpty />}

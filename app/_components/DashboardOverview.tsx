@@ -356,10 +356,14 @@ export function DashboardOverview({
         <StatCard
           label={estimatedAov ? 'Revenue at risk (estimated)' : 'Revenue at risk'}
           value={revenueImpactCents > 0 ? formatMoney(revenueImpactCents) : '—'}
+          // "gaps" here counts DISTINCT failing queries, while the trend chart
+          // below counts search occurrences that hit a gap. Both are correct and
+          // they are different numbers, so each says which it means rather than
+          // leaving two unequal "gaps" figures facing each other on one screen.
           hint={
             estimatedAov
-              ? `${totalGaps} gaps · based on a typical AOV for your category, not your orders`
-              : `${totalGaps} gaps identified · last ${windowDays} days`
+              ? `${totalGaps} distinct gaps · based on a typical AOV for your category, not your orders`
+              : `${totalGaps} distinct gaps · last ${windowDays} days`
           }
           accent={revenueAccent}
         />

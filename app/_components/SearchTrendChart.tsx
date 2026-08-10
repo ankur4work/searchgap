@@ -82,13 +82,31 @@ function niceMax(value: number): number {
 export interface SearchTrendChartProps {
   range: string;
   onRangeChange: (range: string) => void;
+  /**
+   * Polling cadence, driven by the same sync state as the summary cards.
+   *
+   * The cards polled while a sync settled and this chart did not, so after a
+   * burst of searches the cards advanced and the chart stayed on its first
+   * render — "20 searches" in the card sitting directly above "17 searches" in
+   * the plot, both labelled last 30 days. Two figures for one metric on one
+   * screen is the discrepancy the app was rejected for, so the two surfaces now
+   * refresh together.
+   */
+  refetchInterval?: number | false;
 }
 
-export function SearchTrendChart({ range, onRangeChange }: SearchTrendChartProps): JSX.Element {
+export function SearchTrendChart({
+  range,
+  onRangeChange,
+  refetchInterval = false,
+}: SearchTrendChartProps): JSX.Element {
   const [hover, setHover] = useState<number | null>(null);
   const clipId = useId();
 
-  const trend = trpc.dashboard.searchTrend.useQuery({ days: Number(range) });
+  const trend = trpc.dashboard.searchTrend.useQuery(
+    { days: Number(range) },
+    { refetchInterval, refetchOnWindowFocus: false },
+  );
   const points: Point[] = useMemo(() => trend.data?.series ?? [], [trend.data]);
 
   const geometry = useMemo(() => {
@@ -125,7 +143,7 @@ export function SearchTrendChart({ range, onRangeChange }: SearchTrendChartProps
             </Text>
             <Text as="p" tone="subdued" variant="bodySm">
               {trend.data
-                ? `${trend.data.totalSearches.toLocaleString()} searches · ${trend.data.totalGaps.toLocaleString()} hit a gap`
+                ? `${trend.data.totalSearches.toLocaleString()} searches · ${trend.data.totalGaps.toLocaleString()} of them hit a gap`
                 : 'Storefront search volume and how much of it failed'}
             </Text>
           </BlockStack>
