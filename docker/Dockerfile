@@ -18,7 +18,7 @@
 # vector, silently disabling semantic gap matching. The musl shims
 # (libc6-compat/gcompat/libstdc++/libgomp) were tried first and are not
 # sufficient; upstream does not support musl. See lib/ingestion/embed-worker.mjs.
-FROM node:20-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 # openssl: required at runtime by Prisma's query engine.
 # ca-certificates: TLS for the model download from the HuggingFace CDN.
 # libgomp1: OpenMP runtime that onnxruntime-node links against.
