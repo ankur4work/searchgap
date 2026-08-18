@@ -10,10 +10,25 @@ interface ExchangeResponse {
 /**
  * Token Exchange — single-step, session token (id_token) → offline access token.
  *
- * Apps created after Apr 1, 2026 should receive an expiring offline token
- * automatically per Shopify's policy. If the response has no `expires_in`,
- * that indicates a Shopify-side bug or org-level legacy flag — file a Partner
- * support ticket; do not attempt to fix in code.
+ * We request a NON-expiring offline token. Do not reintroduce `expiring=1`.
+ *
+ * This previously asked for an expiring token, and Shopify returned
+ * `expires_in: 3599` — one hour. The only code path that mints a new token is
+ * the embedded bootstrap, which runs when a merchant OPENS the app. So every
+ * scheduled sync more than an hour after the last app open hit
+ * `isTokenExpired` and skipped:
+ *
+ *   13:06Z  bootstrap -> fresh token
+ *   20:33Z  cron -> "Access token expired - skipping products/orders/search sync"
+ *
+ * Storefront data therefore froze whenever nobody was looking at the dashboard,
+ * which is exactly the "fails to synchronize with the store" behaviour this app
+ * was rejected for. A background-sync app cannot depend on a one-hour
+ * credential that only refreshes while a human is present.
+ *
+ * Offline tokens are the correct grant for unattended work and do not expire.
+ * If Shopify ever forces expiry regardless of this request, the fix is a
+ * refresh path the worker can drive on its own — NOT waiting for an app open.
  *
  * https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/exchange
  */
@@ -21,7 +36,7 @@ export async function exchangeOfflineAccessToken(input: {
   shop: string;
   sessionToken: string;
 }): Promise<{ accessToken: string; scope: string; expiresIn: number | null }> {
-  const res = await fetch(`https://${input.shop}/admin/oauth/access_token?expiring=1`, {
+  const res = await fetch(`https://${input.shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -34,7 +49,6 @@ export async function exchangeOfflineAccessToken(input: {
       subject_token: input.sessionToken,
       subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
       requested_token_type: 'urn:shopify:params:oauth:token-type:offline-access-token',
-      expiring: 1,
     }),
   });
 
@@ -54,6 +68,17 @@ export async function exchangeOfflineAccessToken(input: {
     },
     'Token exchange response',
   );
+
+  // Loud, because the failure it precedes is silent: background syncs simply
+  // stop once the token lapses, and the dashboard quietly serves stale figures.
+  // If this ever fires, unattended sync is broken again and the worker needs a
+  // refresh path of its own.
+  if (json.expires_in != null) {
+    logger.error(
+      { shop: input.shop, expiresIn: json.expires_in },
+      'Shopify returned an EXPIRING offline token despite a non-expiring request — scheduled syncs will stop once it lapses',
+    );
+  }
 
   return {
     accessToken: json.access_token,
