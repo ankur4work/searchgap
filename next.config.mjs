@@ -43,6 +43,17 @@ const nextConfig = {
   // standalone output (which we don't use), so disable it entirely.
   outputFileTracing: false,
   experimental: {
+    // Third OOM mitigation for this host, after ignoreBuildErrors and
+    // outputFileTracing above. Next parallelises the production compile across
+    // one worker PROCESS per CPU, each with its own V8 heap, so peak build
+    // memory scales with core count rather than with the size of this app.
+    // On a box running ~40 other containers that is what the kernel kills:
+    // `next build` printed "Creating an optimized production build ..." and
+    // died with no error output at all, three deploys running.
+    //
+    // One worker is slower but bounded. Revisit if the host gets more RAM.
+    cpus: 1,
+    workerThreads: false,
     serverComponentsExternalPackages: [
       '@shopify/shopify-api',
       'pino',
