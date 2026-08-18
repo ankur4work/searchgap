@@ -6,10 +6,21 @@ import { acquireStoreMutex } from '@/lib/ingestion/mutex';
 import { startRun, finishRun } from '@/lib/ingestion/runs';
 import { ShopifyAuthError } from '@/lib/shopify/client';
 import { isTokenExpired } from '@/lib/shopify/store';
+import { withTimeout } from '@/lib/timeout';
 import type { IngestionJobData } from '../queue';
 import { ingestionQueue, classifyQueue } from '../queue';
 
 const AUTH_RETRY_DELAY_MS = 5 * 60 * 1000;
+
+/**
+ * Hard ceiling on a single product sync. Deliberately under the 30-minute store
+ * mutex so a stalled run fails and releases before its own lock expires.
+ *
+ * Without this, any hang below us leaves the IngestionRun at RUNNING forever:
+ * the dashboard then shows "Syncing your store… Products 0%" and a "Syncing"
+ * status card on every page load, with no path out short of a worker restart.
+ */
+const INGEST_TIMEOUT_MS = 25 * 60 * 1000;
 
 export async function ingestProductsProcessor(job: Job<IngestionJobData>): Promise<void> {
   const { storeId, force } = job.data;
@@ -45,7 +56,11 @@ export async function ingestProductsProcessor(job: Job<IngestionJobData>): Promi
     });
 
     try {
-      await ingestProducts(store, { force, runId: run.id });
+      await withTimeout(
+        ingestProducts(store, { force, runId: run.id }),
+        INGEST_TIMEOUT_MS,
+        `Product sync exceeded ${INGEST_TIMEOUT_MS / 60000} minutes and was abandoned`,
+      );
       await finishRun(run.id, 'DONE');
       // Re-classify against the FRESH catalog. The backfill enqueues products,
       // orders and search in parallel; search ingest is fast and triggers an

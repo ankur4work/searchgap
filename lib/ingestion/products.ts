@@ -130,6 +130,18 @@ export async function ingestProducts(
   const EMBED_BATCH = 32;
   const ZERO_VECTOR = Array<number>(EMBEDDING_DIM).fill(0);
   const productArray = Array.from(products.values());
+
+  // Publish the total before the first embed batch. Progress was previously
+  // only written after a batch completed, so the panel showed a motionless
+  // "Products 0%" for the whole bulk fetch — indistinguishable from a job that
+  // had died, which is exactly how a stall read to Shopify's reviewer.
+  if (opts.runId) {
+    await updateProgress(opts.runId, productArray.length === 0 ? 100 : 5, {
+      total: productArray.length,
+      done: 0,
+    });
+  }
+
   let written = 0;
   let embedFailedBatches = 0;
   let productsWithoutVectors = 0;

@@ -106,11 +106,13 @@ ENV PORT=3000
 # Debian's shadow tools, not Alpine's busybox addgroup/adduser.
 RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs -m -s /bin/sh nextjs
 
-# Writable model cache for @xenova/transformers. The 90MB MiniLM model is
-# fetched on first embed and cached here; without a directory the runtime user
-# owns, the download fails and embeddings silently fall back to zero vectors.
+# Model cache for @xenova/transformers. The 90MB MiniLM model is BAKED IN at
+# build time (see the prefetch RUN below) rather than fetched on first embed.
+# This cache is an image layer, not a volume, so a runtime download would be
+# re-armed by every container restart — and when it failed, the embed child
+# exited and product sync stalled at 0% with no catalog written at all.
 ENV TRANSFORMERS_CACHE=/app/.cache/transformers
-RUN mkdir -p /app/.cache/transformers && chown -R nextjs:nodejs /app/.cache
+RUN mkdir -p /app/.cache/transformers
 
 # Production-only node_modules (from the prod-deps stage) — excludes
 # devDependencies to keep the image small.
@@ -134,6 +136,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/next.config.mjs ./next.config.mjs
 # stage's node_modules tree; rather than hunt them via fragile globs, we
 # just run generate again here. Fast (~2s), idempotent, bulletproof.
 RUN ./node_modules/.bin/prisma generate
+
+# Bake the embedding model into the image and prove onnxruntime-node can
+# actually run inference on this base. A build failure here is the point: it is
+# the only place this can break where a reviewer never sees it.
+RUN node lib/ingestion/prefetch-model.mjs \
+    && chown -R nextjs:nodejs /app/.cache
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

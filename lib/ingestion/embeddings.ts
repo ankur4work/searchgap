@@ -16,30 +16,74 @@ const WORKER_PATH = join(__dirname, 'embed-worker.mjs');
 const TIMEOUT_MS = 5 * 60 * 1000;
 
 function runEmbedWorker(texts: string[]): Promise<number[][]> {
+  return runEmbedWorkerAt(WORKER_PATH, texts);
+}
+
+/**
+ * Exported purely as a test seam: the interesting failures here are about how a
+ * *dying* child is handled, which cannot be exercised through the real worker.
+ * Production callers use runEmbedWorker.
+ */
+export function runEmbedWorkerAt(workerPath: string, texts: string[]): Promise<number[][]> {
   return new Promise((resolve, reject) => {
-    const child = fork(WORKER_PATH, [], {
+    let settled = false;
+    let stderr = '';
+
+    const child = fork(workerPath, [], {
       execArgv: ['--experimental-vm-modules'],
-      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+      stdio: ['inherit', 'inherit', 'pipe', 'ipc'],
     });
 
+    // Declared before `finish` so it can be a const; the callback only runs
+    // asynchronously, by which point `finish` is initialised.
     const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      reject(new Error('Embed worker timed out'));
+      finish(() => {
+        child.kill('SIGKILL');
+        reject(new Error(`Embed worker timed out after ${TIMEOUT_MS}ms`));
+      });
     }, TIMEOUT_MS);
 
-    child.on('message', (msg: { vectors?: number[][]; error?: string }) => {
+    // Every terminal path goes through here, so the promise settles exactly
+    // once and the timeout is only ever cleared by something that also settles.
+    const finish = (act: () => void): void => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
-      child.disconnect();
-      if (msg.error) reject(new Error(msg.error));
-      else resolve(msg.vectors ?? []);
+      act();
+    };
+
+    // Keep the tail only. A stack trace is all we need to diagnose, and an
+    // unbounded buffer here would defeat the point of isolating the child.
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr = (stderr + chunk.toString()).slice(-2000);
     });
 
-    child.on('error', (err) => { clearTimeout(timer); reject(err); });
+    child.on('message', (msg: { vectors?: number[][]; error?: string }) => {
+      finish(() => {
+        child.disconnect();
+        if (msg.error) reject(new Error(msg.error));
+        else resolve(msg.vectors ?? []);
+      });
+    });
+
+    child.on('error', (err) => finish(() => reject(err)));
+
+    // Any exit before a reply is a failure, whatever code/signal it carries.
+    // The previous guard (`code !== 0 && signal !== null`) missed the single
+    // most common crash there is — exit code 1 with no signal, which is what a
+    // failed top-level import or a rejected model download produces. It cleared
+    // the timeout and then rejected nothing, so the promise stayed pending
+    // forever: ingestProducts hung on the first batch before writing a single
+    // row, finishRun never ran, and the IngestionRun sat at RUNNING/0% for good.
     child.on('exit', (code, signal) => {
-      clearTimeout(timer);
-      if (code !== 0 && signal !== null) {
-        reject(new Error(`Embed worker killed (signal=${signal})`));
-      }
+      finish(() => {
+        reject(
+          new Error(
+            `Embed worker exited without replying (code=${code}, signal=${signal})` +
+              (stderr.trim() ? `: ${stderr.trim()}` : ''),
+          ),
+        );
+      });
     });
 
     child.send({ texts });
