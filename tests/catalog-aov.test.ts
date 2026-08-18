@@ -41,9 +41,14 @@ describe('catalogMedianPriceCents', () => {
     await expect(catalogMedianPriceCents(p, 's1')).resolves.toBe(10_000);
   });
 
-  it('returns null below the minimum sample rather than guessing', async () => {
-    const p = fakePrisma([priced('10.00'), priced('20.00'), priced('30.00'), priced('40.00')]);
-    await expect(catalogMedianPriceCents(p, 's1')).resolves.toBeNull();
+  it('works on a tiny review store — 3 products still yields a median', async () => {
+    // The store this app was rejected against has exactly three products.
+    const p = fakePrisma([priced('10.00'), priced('20.00'), priced('30.00')]);
+    await expect(catalogMedianPriceCents(p, 's1')).resolves.toBe(2_000);
+  });
+
+  it('works with a single priced product', async () => {
+    await expect(catalogMedianPriceCents(fakePrisma([priced('42.00')]), 's1')).resolves.toBe(4_200);
   });
 
   it('returns null for an empty catalog — the state a stalled sync leaves behind', async () => {

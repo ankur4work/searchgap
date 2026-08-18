@@ -2,10 +2,21 @@ import type { PrismaClient } from '@prisma/client';
 import { logger } from '../logger';
 
 /**
- * Minimum distinct priced products before a median is worth trusting. Below
- * this a single outlier moves the figure enough to be misleading.
+ * Minimum distinct priced products before a median is worth computing.
+ *
+ * This was 5, on the reasoning that a smaller sample is too easily skewed. That
+ * reasoning is right in general and wrong for the case that actually matters:
+ * App Store review stores are tiny. The store this app was rejected against has
+ * THREE products and eight orders, so a threshold of 5 declined, and with a
+ * non-USD currency blocking the benchmark too the dashboard fell all the way
+ * through to showing no figure at all. An empty revenue card on a review store
+ * reads as "still not syncing" — the exact conclusion we are trying to avoid.
+ *
+ * One priced product is enough to state something true: this merchant's own
+ * prices, in this merchant's own currency, labelled as an estimate. That beats
+ * both a blank card and a US-dollar benchmark wearing a riyal symbol.
  */
-const MIN_PRICED_PRODUCTS = 5;
+const MIN_PRICED_PRODUCTS = 1;
 
 interface VariantLike {
   price?: string | number | null;
