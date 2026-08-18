@@ -8,6 +8,7 @@ import { classify, type AggregatedQuery, type ProductRef, type SemanticMatchRef 
 import { estimateRevenue } from './revenue';
 import { engineConfig } from './config';
 import { detectCategory } from './category';
+import { catalogMedianPriceCents } from './catalog-aov';
 import { invalidateSummary } from '../cache';
 
 const redisPub = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null, lazyConnect: true });
@@ -81,6 +82,11 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
     tags: p.tags,
   }));
 
+  // Only needed when the store has no real AOV of its own. Computed once per
+  // run rather than per query.
+  const catalogAovCents =
+    store.aovCents == null ? await catalogMedianPriceCents(prisma, store.id) : null;
+
   const topTags = topTagsFromCatalog(products);
   const category =
     store.category ?? detectCategory({ industry: store.industry, topTags });
@@ -139,6 +145,12 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
       monthlyVolume: aggregate.occurrenceCount,
       aovCents: store.aovCents,
       storeCategory: category,
+      // Empty string, not a 'USD' default, when the currency is unknown. The
+      // column is only populated by the order ingest, and guessing USD here is
+      // exactly how a non-USD store ends up with a dollar benchmark under its
+      // own currency symbol. Unknown currency means no benchmark figure.
+      storeCurrency: store.currency ?? '',
+      catalogAovCents,
     });
 
     await prisma.$transaction(async (tx) => {
@@ -242,6 +254,14 @@ export async function runClassificationPipeline(store: Store): Promise<Classific
         : 0,
       aovCents: store.aovCents,
       aovIsFallback: store.aovCents == null,
+      // Which AOV actually backed every figure above, and in what currency.
+      // Production has no readable database, so this line is the only way to
+      // reconcile a dashboard number after the fact.
+      aovBasis:
+        store.aovCents != null ? 'orders' : catalogAovCents != null ? 'catalog' : 'benchmark',
+      catalogAovCents,
+      storeCurrency: store.currency,
+      catalogProducts: products.length,
       storeCategory: store.category ?? null,
       prunedGaps,
     },

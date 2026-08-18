@@ -6,8 +6,23 @@ import { logger } from '../logger';
 export interface RevenueInput {
   classificationType: ClassificationType | 'NONE';
   monthlyVolume: number;
+  /** Real AOV computed from this store's own orders, in the store's currency. */
   aovCents: number | null;
   storeCategory: string | null | undefined;
+  /**
+   * The store's currency. Required: the category benchmarks are denominated in
+   * USD, and applying one to a store trading in another currency prints a
+   * number that is wrong by the exchange rate — a $60 benchmark rendered as
+   * "SAR 5". Without this we cannot tell the two cases apart.
+   */
+  storeCurrency: string;
+  /**
+   * Median catalog price for this store, in the store's currency. Used ahead of
+   * the USD benchmark when the store has too few recent orders, because it is
+   * derived from the merchant's own data and is currency-correct by
+   * construction.
+   */
+  catalogAovCents?: number | null;
 }
 
 export interface RevenueEstimate {
@@ -19,12 +34,16 @@ export interface RevenueEstimate {
   bandHighCents: number;
   category: string;
   /**
-   * - 'estimated_aov' — the store has no orders yet, used the category-typical
-   *   AOV. Surfacing this lets the UI show "estimated" badging until real AOV
-   *   data is available.
+   * - 'estimated_aov' — too few recent orders, used the category-typical USD
+   *   benchmark. Only ever set for USD stores. The UI badges these as estimates.
+   * - 'catalog_aov' — too few recent orders, used the store's median product
+   *   price instead. Currency-correct and store-specific.
+   * - 'no_aov' — no real AOV, no catalog prices, and the store does not trade
+   *   in the benchmark currency. We deliberately produce NO figure rather than
+   *   convert at an exchange rate we do not have.
    * - 'not_classified' — query was healthy, no gap.
    */
-  note?: 'estimated_aov' | 'not_classified';
+  note?: 'estimated_aov' | 'catalog_aov' | 'no_aov' | 'not_classified';
 }
 
 /**
@@ -51,24 +70,57 @@ export function estimateRevenue(input: RevenueInput): RevenueEstimate {
     return zero(pct, category);
   }
 
-  // Fall back to a category-typical AOV when the store has no orders yet so
-  // dashboards on day-one show real magnitudes instead of $0. The note flag
-  // lets the UI badge these as estimates until real AOV data arrives.
+  // Fall back when the store has too few recent orders, so dashboards on
+  // day-one show real magnitudes instead of $0 — but only via a figure that is
+  // actually denominated in this store's currency.
+  //
+  // Order of preference:
+  //   1. real AOV from the store's own orders  (always store currency)
+  //   2. the store's median catalog price      (always store currency)
+  //   3. the category USD benchmark            (ONLY if the store trades in USD)
+  //   4. nothing — no figure at all
+  //
+  // Step 3's currency guard is the fix for a reported defect: the benchmarks are
+  // US-dollar figures with no currency attached, so a Saudi store's single gap
+  // rendered a $60 benchmark as "SAR 5" — off by the exchange rate, on the very
+  // card the app was rejected over. Converting would need an FX rate we do not
+  // have and cannot keep current, so we decline to state a number instead.
   let aovCents = input.aovCents;
   let note: RevenueEstimate['note'];
   if (aovCents == null) {
-    const fallback = defaultAovFor(input.storeCategory);
-    aovCents = fallback.aovCents;
-    note = 'estimated_aov';
-    logger.debug(
-      {
-        category: input.storeCategory,
-        fallbackAovCents: aovCents,
-        monthlyVolume: input.monthlyVolume,
-        benchmarkPct: pct,
-      },
-      'revenue.estimate using fallback AOV',
-    );
+    const catalogAov = input.catalogAovCents;
+    if (catalogAov != null && catalogAov > 0) {
+      aovCents = catalogAov;
+      note = 'catalog_aov';
+      logger.debug(
+        { catalogAovCents: aovCents, monthlyVolume: input.monthlyVolume, benchmarkPct: pct },
+        'revenue.estimate using catalog median price as AOV',
+      );
+    } else {
+      const fallback = defaultAovFor(input.storeCategory);
+      if (fallback.currency !== input.storeCurrency) {
+        logger.warn(
+          {
+            storeCurrency: input.storeCurrency,
+            benchmarkCurrency: fallback.currency,
+            category: input.storeCategory,
+          },
+          'revenue.estimate suppressed — benchmark AOV is in a different currency and no catalog prices are available',
+        );
+        return zero(pct, category, 'no_aov');
+      }
+      aovCents = fallback.aovCents;
+      note = 'estimated_aov';
+      logger.debug(
+        {
+          category: input.storeCategory,
+          fallbackAovCents: aovCents,
+          monthlyVolume: input.monthlyVolume,
+          benchmarkPct: pct,
+        },
+        'revenue.estimate using fallback AOV',
+      );
+    }
   }
 
   // Integer-cents math: multiply volume × aovCents first (both integers) then

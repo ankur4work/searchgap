@@ -138,7 +138,7 @@ export default function DashboardPage(): JSX.Element {
           revenueImpactCents={s.revenueImpactCents}
           currency={s.currency}
           windowDays={s.windowDays}
-          estimatedAov={s.aovCents == null || s.insufficientAov}
+          aovBasis={s.aovBasis}
           syncReady={ingestionReady}
           syncJobs={ingestJobs}
           hasError={ingestHasError}

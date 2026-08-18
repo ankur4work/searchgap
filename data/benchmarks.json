@@ -3,6 +3,7 @@
   "updatedAt": "2026-04-29",
   "source": "Industry reports + Shopify Commerce Trends 2024",
   "default": 0.08,
+  "aovCurrency": "USD",
   "defaultAovCents": 6000,
   "categories": {
     "FASHION": 0.10,

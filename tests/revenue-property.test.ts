@@ -16,7 +16,7 @@ describe('estimateRevenue — property-based', () => {
             classificationType: 'TYPE_1',
             monthlyVolume: volume,
             aovCents,
-            storeCategory: category,
+            storeCategory: category, storeCurrency: 'USD',
           });
           expect(out.estimateCents).toBeGreaterThanOrEqual(0);
         },
@@ -36,7 +36,7 @@ describe('estimateRevenue — property-based', () => {
             classificationType: 'TYPE_1',
             monthlyVolume: volume,
             aovCents,
-            storeCategory: category,
+            storeCategory: category, storeCurrency: 'USD',
           });
           expect(out.bandLowCents).toBeLessThanOrEqual(out.estimateCents);
           expect(out.estimateCents).toBeLessThanOrEqual(out.bandHighCents);
@@ -59,13 +59,13 @@ describe('estimateRevenue — property-based', () => {
             classificationType: 'TYPE_1',
             monthlyVolume: lo,
             aovCents: aov,
-            storeCategory: category,
+            storeCategory: category, storeCurrency: 'USD',
           });
           const b = estimateRevenue({
             classificationType: 'TYPE_1',
             monthlyVolume: hi,
             aovCents: aov,
-            storeCategory: category,
+            storeCategory: category, storeCurrency: 'USD',
           });
           expect(b.estimateCents).toBeGreaterThanOrEqual(a.estimateCents);
           expect(b.bandLowCents).toBeGreaterThanOrEqual(a.bandLowCents);
@@ -88,7 +88,7 @@ describe('estimateRevenue — property-based', () => {
               classificationType: 'TYPE_1',
               monthlyVolume: volume,
               aovCents,
-              storeCategory: category,
+              storeCategory: category, storeCurrency: 'USD',
             }),
           ).not.toThrow();
         },

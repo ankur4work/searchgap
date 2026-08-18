@@ -176,11 +176,13 @@ interface Props {
   /** Reporting window in days — shared with the trend chart below the cards. */
   windowDays: number;
   /**
-   * True when the store has too few recent orders to compute a real AOV, so
-   * revenue rests on a category-typical figure rather than this store's own
-   * economics. The card must say so instead of printing a confident total.
+   * What the revenue figure rests on. The card must say which, instead of
+   * printing three different provenances as one confident total:
+   *   'orders'    — this store's own recent orders
+   *   'estimated' — too few recent orders; a stand-in AOV was used
+   *   'none'      — no figure could be produced honestly (see revenue.ts)
    */
-  estimatedAov: boolean;
+  aovBasis: 'orders' | 'estimated' | 'none';
   syncReady: boolean;
   syncJobs: SyncJob[];
   hasError: boolean;
@@ -197,7 +199,7 @@ export function DashboardOverview({
   revenueImpactCents,
   currency,
   windowDays,
-  estimatedAov,
+  aovBasis,
   syncReady,
   syncJobs,
   hasError,
@@ -354,16 +356,22 @@ export function DashboardOverview({
           accent={queriesAccent}
         />
         <StatCard
-          label={estimatedAov ? 'Revenue at risk (estimated)' : 'Revenue at risk'}
+          label={aovBasis === 'estimated' ? 'Revenue at risk (estimated)' : 'Revenue at risk'}
           value={revenueImpactCents > 0 ? formatMoney(revenueImpactCents) : '—'}
           // "gaps" here counts DISTINCT failing queries, while the trend chart
           // below counts search occurrences that hit a gap. Both are correct and
           // they are different numbers, so each says which it means rather than
           // leaving two unequal "gaps" figures facing each other on one screen.
+          //
+          // The 'none' branch matters: we would rather show no figure than one
+          // denominated in the wrong currency, and the merchant is owed the
+          // reason plus the thing they can do about it.
           hint={
-            estimatedAov
-              ? `${totalGaps} distinct gaps · based on a typical AOV for your category, not your orders`
-              : `${totalGaps} distinct gaps · last ${windowDays} days`
+            aovBasis === 'estimated'
+              ? `${totalGaps} distinct gaps · estimated — too few recent orders to use your own average order value`
+              : aovBasis === 'none' && totalGaps > 0
+                ? `${totalGaps} distinct gaps · no revenue estimate yet — needs recent orders or product prices`
+                : `${totalGaps} distinct gaps · last ${windowDays} days`
           }
           accent={revenueAccent}
         />

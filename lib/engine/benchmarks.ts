@@ -8,6 +8,11 @@ const BenchmarksSchema = z.object({
   updatedAt: z.string(),
   source: z.string().optional(),
   default: z.number().min(0).max(1),
+  // The currency the AOV figures below are denominated in. These are US-dollar
+  // industry benchmarks; without this field the numbers were currency-less and
+  // got rendered in whatever the store's currency happened to be, so a Saudi
+  // store saw a $60 benchmark printed as "SAR 5".
+  aovCurrency: z.string().length(3).default('USD'),
   defaultAovCents: z.number().int().positive().default(6000),
   categories: z.record(z.string(), z.number().min(0).max(1)),
   categoryAovCents: z.record(z.string(), z.number().int().positive()).optional().default({}),
@@ -78,22 +83,26 @@ export function benchmarkFor(category: string | null | undefined): {
  */
 export function defaultAovFor(category: string | null | undefined): {
   aovCents: number;
+  /** Currency these benchmark figures are denominated in — always check it. */
+  currency: string;
   category: string;
   source: 'exact' | 'alias' | 'default';
 } {
   const b = cache;
+  const currency = b.aovCurrency;
   const fallback = b.defaultAovCents;
-  if (!category) return { aovCents: fallback, category: 'DEFAULT', source: 'default' };
+  if (!category) return { aovCents: fallback, currency, category: 'DEFAULT', source: 'default' };
   const key = category.toUpperCase().trim();
   const direct = b.categoryAovCents[key];
-  if (direct !== undefined) return { aovCents: direct, category: key, source: 'exact' };
+  if (direct !== undefined) return { aovCents: direct, currency, category: key, source: 'exact' };
   const aliasTarget = b.aliases[key];
   if (aliasTarget && b.categoryAovCents[aliasTarget] !== undefined) {
     return {
       aovCents: b.categoryAovCents[aliasTarget] as number,
+      currency,
       category: aliasTarget,
       source: 'alias',
     };
   }
-  return { aovCents: fallback, category: 'DEFAULT', source: 'default' };
+  return { aovCents: fallback, currency, category: 'DEFAULT', source: 'default' };
 }

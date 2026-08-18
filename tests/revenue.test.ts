@@ -23,72 +23,72 @@ const SCENARIOS: Array<{
   // PRD §10.3 worked example: 200 × $42 × 10% = $840, band $672 – $1008.
   {
     name: 'PRD example — fashion 200/$42/10%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 200, aovCents: 4200, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 200, aovCents: 4200, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 84_000, bandLowCents: 67_200, bandHighCents: 100_800 },
   },
   {
     name: 'fashion small volume 10/$42/10%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 10, aovCents: 4200, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 10, aovCents: 4200, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 4_200, bandLowCents: 3_360, bandHighCents: 5_040 },
   },
   {
     name: 'beauty 500/$28/12%',
-    input: { classificationType: 'TYPE_2', monthlyVolume: 500, aovCents: 2800, storeCategory: 'BEAUTY' },
+    input: { classificationType: 'TYPE_2', monthlyVolume: 500, aovCents: 2800, storeCategory: 'BEAUTY', storeCurrency: 'USD' },
     expect: { estimateCents: 168_000, bandLowCents: 134_400, bandHighCents: 201_600 },
   },
   {
     name: 'electronics 100/$150/7.5%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 15_000, storeCategory: 'ELECTRONICS' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 15_000, storeCategory: 'ELECTRONICS', storeCurrency: 'USD' },
     expect: { estimateCents: 112_500, bandLowCents: 90_000, bandHighCents: 135_000 },
   },
   {
     name: 'home 250/$65/9%',
-    input: { classificationType: 'TYPE_4', monthlyVolume: 250, aovCents: 6500, storeCategory: 'HOME' },
+    input: { classificationType: 'TYPE_4', monthlyVolume: 250, aovCents: 6500, storeCategory: 'HOME', storeCurrency: 'USD' },
     expect: { estimateCents: 146_250, bandLowCents: 117_000, bandHighCents: 175_500 },
   },
   {
     name: 'food 800/$22/14%',
-    input: { classificationType: 'TYPE_3', monthlyVolume: 800, aovCents: 2200, storeCategory: 'FOOD' },
+    input: { classificationType: 'TYPE_3', monthlyVolume: 800, aovCents: 2200, storeCategory: 'FOOD', storeCurrency: 'USD' },
     expect: { estimateCents: 246_400, bandLowCents: 197_120, bandHighCents: 295_680 },
   },
   {
     name: 'unknown category → DEFAULT 8%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: 'PET_SUPPLIES' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: 'PET_SUPPLIES', storeCurrency: 'USD' },
     expect: { estimateCents: 40_000, bandLowCents: 32_000, bandHighCents: 48_000 },
   },
   {
     name: 'alias: APPAREL → FASHION 10%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: 'APPAREL' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: 'APPAREL', storeCurrency: 'USD' },
     expect: { estimateCents: 50_000, bandLowCents: 40_000, bandHighCents: 60_000 },
   },
   {
     name: 'alias: GROCERY → FOOD 14%',
-    input: { classificationType: 'TYPE_2', monthlyVolume: 100, aovCents: 5000, storeCategory: 'GROCERY' },
+    input: { classificationType: 'TYPE_2', monthlyVolume: 100, aovCents: 5000, storeCategory: 'GROCERY', storeCurrency: 'USD' },
     expect: { estimateCents: 70_000, bandLowCents: 56_000, bandHighCents: 84_000 },
   },
   {
     name: 'null category → DEFAULT',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: null },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: null, storeCurrency: 'USD' },
     expect: { estimateCents: 40_000, bandLowCents: 32_000, bandHighCents: 48_000 },
   },
   {
     name: 'case-insensitive category',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: 'fashion' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 5000, storeCategory: 'fashion', storeCurrency: 'USD' },
     expect: { estimateCents: 50_000, bandLowCents: 40_000, bandHighCents: 60_000 },
   },
   {
     name: 'monthlyVolume = 0 → zero estimate',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 0, aovCents: 4200, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 0, aovCents: 4200, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 0, bandLowCents: 0, bandHighCents: 0 },
   },
   {
     name: 'negative volume → zero estimate',
-    input: { classificationType: 'TYPE_1', monthlyVolume: -5, aovCents: 4200, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: -5, aovCents: 4200, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 0, bandLowCents: 0, bandHighCents: 0 },
   },
   {
     name: 'NONE classification → zero + note not_classified',
-    input: { classificationType: 'NONE', monthlyVolume: 200, aovCents: 4200, storeCategory: 'FASHION' },
+    input: { classificationType: 'NONE', monthlyVolume: 200, aovCents: 4200, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 0, bandLowCents: 0, bandHighCents: 0, note: 'not_classified' },
   },
   {
@@ -98,7 +98,7 @@ const SCENARIOS: Array<{
     // dashboard full of $0. Derived from the benchmark config rather than
     // hardcoded, so retuning the benchmarks doesn't silently break this test.
     name: 'null AOV → category fallback + note estimated_aov',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 200, aovCents: null, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 200, aovCents: null, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: {
       estimateCents: NULL_AOV_ESTIMATE,
       bandLowCents: Math.round(NULL_AOV_ESTIMATE * 0.8),
@@ -108,27 +108,27 @@ const SCENARIOS: Array<{
   },
   {
     name: 'tiny AOV $0.01 → rounds correctly',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 1, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 100, aovCents: 1, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 10, bandLowCents: 8, bandHighCents: 12 },
   },
   {
     name: 'large volumes integer-safe 10000/$100/10%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 10_000, aovCents: 10_000, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 10_000, aovCents: 10_000, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 10_000_000, bandLowCents: 8_000_000, bandHighCents: 12_000_000 },
   },
   {
     name: 'UNCAT treated like a classified type (zero only if AOV missing)',
-    input: { classificationType: 'UNCAT' as ClassificationType, monthlyVolume: 50, aovCents: 5000, storeCategory: 'FASHION' },
+    input: { classificationType: 'UNCAT' as ClassificationType, monthlyVolume: 50, aovCents: 5000, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: { estimateCents: 25_000, bandLowCents: 20_000, bandHighCents: 30_000 },
   },
   {
     name: 'electronics low AOV 10000/$1/7.5%',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 10_000, aovCents: 100, storeCategory: 'ELECTRONICS' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 10_000, aovCents: 100, storeCategory: 'ELECTRONICS', storeCurrency: 'USD' },
     expect: { estimateCents: 75_000, bandLowCents: 60_000, bandHighCents: 90_000 },
   },
   {
     name: 'rounding: 33 × 333 × 0.10 = 1098.9 → 1099',
-    input: { classificationType: 'TYPE_1', monthlyVolume: 33, aovCents: 333, storeCategory: 'FASHION' },
+    input: { classificationType: 'TYPE_1', monthlyVolume: 33, aovCents: 333, storeCategory: 'FASHION', storeCurrency: 'USD' },
     expect: {
       estimateCents: 1099,
       bandLowCents: Math.round(1099 * 0.8),
@@ -151,7 +151,7 @@ describe('estimateRevenue — scenario snapshots', () => {
       classificationType: 'TYPE_1',
       monthlyVolume: 200,
       aovCents: 4200,
-      storeCategory: 'FASHION',
+      storeCategory: 'FASHION', storeCurrency: 'USD',
     });
     expect(out.estimateCents / 100).toBe(840);
     expect(out.bandLowCents / 100).toBe(672);
@@ -164,7 +164,7 @@ describe('estimateRevenue — scenario snapshots', () => {
       classificationType: 'TYPE_1' as const,
       monthlyVolume: 200,
       aovCents: 4200,
-      storeCategory: 'FASHION',
+      storeCategory: 'FASHION', storeCurrency: 'USD',
     };
     const a = estimateRevenue(input);
     const b = estimateRevenue(input);

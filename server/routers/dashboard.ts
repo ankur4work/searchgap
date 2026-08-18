@@ -499,6 +499,12 @@ async function computeSummary(
     category: store?.category ?? 'DEFAULT',
     aovCents: store?.aovCents ?? null,
     insufficientAov: store?.insufficientAov ?? false,
+    // What the revenue figure actually rests on, so the card can say so rather
+    // than presenting three different provenances as one confident number.
+    // 'none' means the pipeline declined to produce a figure — no order history,
+    // no catalog prices, and a store currency the USD benchmarks don't apply to.
+    aovBasis:
+      store?.aovCents != null ? 'orders' : totals.revenue_cents > 0 ? 'estimated' : 'none',
     lastSyncedAt: latestDate([
       store?.lastSearchSync,
       store?.lastProductSync,
@@ -548,6 +554,8 @@ export interface DashboardSummary {
   category: string;
   aovCents: number | null;
   insufficientAov: boolean;
+  /** Provenance of `revenueImpactCents` — see computeSummary. */
+  aovBasis: 'orders' | 'estimated' | 'none';
   lastSyncedAt: Date | null;
   firstDashboardViewAt: Date | null;
   revenueImpactCents: number;
