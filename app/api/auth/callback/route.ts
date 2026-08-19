@@ -151,11 +151,31 @@ async function handleEmbeddedBootstrap(req: NextRequest): Promise<NextResponse> 
   // searches without any merchant action.
   await ensureTrackerScriptTag(store);
 
-  // Only enqueue a backfill on first install. Subsequent app opens just
-  // refresh the access token — they must not trigger a new sync.
-  if (isNewStore) {
+  // Enqueue a backfill on first install, and again when the data has gone
+  // stale — but never on an ordinary app open, which would sync on every page
+  // load.
+  //
+  // The staleness case exists because Shopify's offline tokens live one hour
+  // and can only be refreshed here, by a browser. Any scheduled sync more than
+  // an hour after the last app open skips, so a store nobody visits for a day
+  // has a day-old catalog. We have just minted a fresh token a few lines above,
+  // which makes this the one moment a catch-up sync is guaranteed to work.
+  //
+  // STALE_AFTER_MS is comfortably longer than the hourly cron, so a store whose
+  // scheduled syncs are running normally never triggers this path.
+  const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
+  const lastSync = [store.lastProductSync, store.lastOrderSync, store.lastSearchSync]
+    .filter((d): d is Date => d != null)
+    .reduce<number | null>((acc, d) => Math.max(acc ?? 0, d.getTime()), null);
+  const isStale = lastSync == null || Date.now() - lastSync > STALE_AFTER_MS;
+
+  if (isNewStore || isStale) {
     const { enqueueInstallBackfill } = await import('@/jobs/schedule');
     await enqueueInstallBackfill(store.id);
+    logger.info(
+      { shop: claims.shop, storeId: store.id, isNewStore, isStale, lastSync },
+      isNewStore ? 'bootstrap enqueued install backfill' : 'bootstrap enqueued catch-up sync for stale store',
+    );
   }
 
   // Reconcile the billing plan against Shopify on every bootstrap.

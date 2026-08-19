@@ -27,8 +27,14 @@ export async function ingestSearchProcessor(job: Job<IngestionJobData>): Promise
   const { isTokenExpired } = await import('@/lib/shopify/store');
   if (isTokenExpired(store)) {
     logger.warn({ storeId, shop: store.shopDomain }, 'Access token expired — skipping search sync until merchant reopens app');
-    const run = await startRun({ storeId, jobType: 'INGEST_SEARCH', bullJobId: job.id ?? null, attempt: job.attemptsMade + 1 });
-    await finishRun(run.id, 'FAILED', 'Access token expired — please reopen the app in Shopify Admin to refresh it');
+    // Do NOT record this as a FAILED run. An expired token is a "waiting for
+    // the merchant" state, not a sync fault: the embedded bootstrap mints a new
+    // token the instant the app is opened. Recording FAILED made the latest run
+    // per job type failed, and onboarding.status derives hasError from exactly
+    // that — so the dashboard showed a red "Error / Refresh error" banner that
+    // no amount of waiting cleared, on a store whose data was merely a little
+    // stale. Leaving the previous successful run in place keeps the dashboard
+    // honest, and the bootstrap re-enqueues a sync on the next app open.
     await mutex.release();
     return;
   }
